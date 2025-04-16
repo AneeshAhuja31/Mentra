@@ -1,4 +1,7 @@
 import streamlit as st
+import requests
+if "request_session" not in st.session_state:
+    st.session_state.requests_session = requests.Session()
 
 st.set_page_config(page_title="Mentra",page_icon="😈",layout="centered")
 

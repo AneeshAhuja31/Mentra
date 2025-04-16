@@ -21,7 +21,7 @@ with st.container (border= True):
                 if response_data.get("result"):
                     st.write(response_data.get("message"))
                     if st.button("Login"):
-                        st.switch_pag("pages/login_.py")
+                        st.switch_page("pages/login_.py")
                 else:
                     st.error(response_data.get("message"))
         
