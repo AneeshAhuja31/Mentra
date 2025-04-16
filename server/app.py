@@ -1,8 +1,8 @@
-from fastapi import FastAPI
+from fastapi import FastAPI,Cookie,Response
 import streamlit as st
 from pydantic import BaseModel
 from database import find_user,insert_user,check_password
-
+from cookie_auth import create_session
 app = FastAPI()
 
 class User_Request(BaseModel):
@@ -14,14 +14,13 @@ async def login(request:User_Request):
     body = request.dict()
     username = body.get("username")
     password = body.get("password")
-    namecheck_result = await find_user(username)
-    if not namecheck_result:
+    user = await find_user(username)
+    if not user:
         response = {"result":False,"message":"Login failed. Username doesn't exist!"}
     else:
-
         passwordcheck_result = await check_password(username,password)
         if passwordcheck_result:
-            response = {"result":True,"message":"Login successful!"}
+            response = create_session(user)
         else:
             response = {"result":False,"message":"Incorrect password!"}
     return response
@@ -47,7 +46,7 @@ async def signup(request:User_Request):
         if insert_request:
             response = {
                 "result":True,
-                "message":"Signup Successful"
+                "message":"Signup Successful. You can login in now!"
             } 
             
         else:
@@ -56,6 +55,9 @@ async def signup(request:User_Request):
                 "message":"Signup failed"
             }
     return response
+
+# @app.get('/validate_session')
+# async def validate_user_session(session_id:str = Cookie(None)):
         
 if __name__ == "__main__":
     import uvicorn

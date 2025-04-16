@@ -20,7 +20,8 @@ with st.container (border= True):
                 response_data = response.json()
                 if response_data.get("result"):
                     st.write(response_data.get("message"))
-                    st.switch_page("pages/dashboard.py")
+                    if st.button("Login"):
+                        st.switch_pag("pages/login_.py")
                 else:
                     st.error(response_data.get("message"))
         
