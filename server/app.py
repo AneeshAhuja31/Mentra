@@ -72,12 +72,6 @@ async def get_current_user(session_id:str = Cookie(None)):
         return None
     return await validate_session(session_id)
 
-@app.get("/protected_resource")
-async def protected_resource(current_user = Depends(get_current_user)):
-    if not current_user:
-        return {"result":False,"message":"Authentication required"}
-    return {"result": True, "message": f"Hello {current_user['username']}, you accessed a protected resource"}
-
 @app.post("/logout")
 async def logout(response:Response,session_id:str = Cookie(None)):
     if session_id:
