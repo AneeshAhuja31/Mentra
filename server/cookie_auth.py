@@ -16,7 +16,7 @@ users = db.users
 
 async def create_session(user):
     session_id = str(uuid.uuid4())
-    await sessions.insert_one({"user_id":str(user["_id"]),"session_id":session_id})
+    await sessions.insert_one({"user_id":user["_id"],"session_id":session_id})
     response =JSONResponse(content = {"result":True,"message":"Login successful!","username":user["username"]})
     response.set_cookie(key="session_id",value=session_id,httponly=True)
     return response
