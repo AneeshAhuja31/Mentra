@@ -4,7 +4,7 @@ from pydantic import BaseModel
 from database import find_user,insert_user,check_password
 from cookie_auth import create_session,validate_session,end_session
 app = FastAPI()
-
+from fastapi.responses import JSONResponse
 class User_Request(BaseModel):
     username:str
     password:str
@@ -72,17 +72,12 @@ async def get_current_user(session_id:str = Cookie(None)):
         return None
     return await validate_session(session_id)
 
-@app.get("/protected_resource")
-async def protected_resource(current_user = Depends(get_current_user)):
-    if not current_user:
-        return {"result":False,"message":"Authentication required"}
-    return {"result": True, "message": f"Hello {current_user['username']}, you accessed a protected resource"}
 
-@app.post("/logout")
-async def logout(response:Response,session_id:str = Cookie(None)):
+@app.get("/logout")
+async def logout(session_id:str = Cookie(None)):
     if session_id:
         await end_session(session_id)
-    response = Response(content={"result":True,"message":"Logged out successfully!"})
+    response = JSONResponse(content={"result":True,"message":"Logged out successfully!"})
     response.delete_cookie(key="session_id")
     return response
 

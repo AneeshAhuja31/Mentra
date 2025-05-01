@@ -1,15 +1,19 @@
 import requests.cookies
 import streamlit as st
 import requests
+from http.cookies import SimpleCookie
 
-if "requests_session" not in st.session_state:
-    st.session_state.requests_session = requests.Session()
 
 if "authenticated" not in st.session_state:
-    response = requests.get("http://127.0.0.1:8000/validate_session")
+    st.session_state.authenticated = False
+
+if st.session_state.authenticated == True:
+    session_id = st.session_state.session_id
+    cookie = {"session_id":session_id}
+    response = requests.get("http://127.0.0.1:8000/validate_session",cookies=cookie)
     if response.status_code == 200:
         body = response.json()
-        if body.get("authenticated",False):
+        if body.get("authenticated",True):
             st.session_state.authenticated = True
             st.session_state.username = body.get("username")
             st.switch_page("pages/dashboard.py")
@@ -25,17 +29,18 @@ with st.container(border=True):
         }
         # Setting up session to preserve cookies
         response = st.session_state.requests_session.post("http://127.0.0.1:8000/login",json=request)
-        
-        if response.status_code ==200:
-            response_data = response.json()
-            if response_data.get("result"):
-                st.session_state.authenticated = True
-                st.session_state.username = response_data.get("username")
-                st.rerun()
-            else:
-                st.error(response_data.get("message"))
+        response_data = response.json()
+        if response.status_code ==200 and response_data.get('result') == True:
+            cookie_header = response.headers['set-cookie']
+            cookie = SimpleCookie()
+            cookie.load(cookie_header)
+            session_id = cookie['session_id'].value
+            st.session_state.session_id = session_id
+            st.session_state.authenticated = True
+            st.session_state.username = response_data.get("username")
+            st.rerun()
         else:
-            st.error("Failed to connect to the server. Please try again later.")
+            st.error(response_data.get("message"))
     st.write("\n")
     st.write("\n")
     
