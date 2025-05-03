@@ -1,4 +1,4 @@
-from motor.motor_asyncio import AsyncIOMotorClient
+from motor.motor_asyncio import AsyncIOMotorClient,AsyncIOMotorGridFSBucket
 from passlib.context import CryptContext
 import os
 import uuid
@@ -7,8 +7,8 @@ load_dotenv()
 mongodb_uri = os.getenv("MONGODB_URI") 
 client = AsyncIOMotorClient(mongodb_uri)
 db = client.mentra_db
-
 users = db.users
+pdffiles = AsyncIOMotorGridFSBucket(db,bucket_name="pdffiles")
 
 pwd_context = CryptContext(schemes=['bcrypt'],deprecated='auto')
 
@@ -33,6 +33,21 @@ async def check_password(username,password):
         stored_password = user['password']
         return pwd_context.verify(password,stored_password)
     return False
+
+async def insert_pdf(file,username):
+    file_data = file.read()
+    filename = f"{uuid.uuid4()}_{file.filename}"
+    file_id = pdffiles.upload_from_stream(
+        filename,
+        file_data,
+        metadata={
+            "username":username
+        }
+    )
+    return {
+        "message":"PDF uploaded successfully",
+        "file_id":str(file_id)
+    }
     
     
 

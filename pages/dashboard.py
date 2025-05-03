@@ -68,19 +68,51 @@ st.title("Dashboard")
 st.write(f"Welcome, {st.session_state.username}!")
 
 st.write("Let us start by uploading your resume!!")
-file = st.file_uploader(label="Upload Resume",type='pdf')
-if file:
-    data = PdfReader(file)
-    print(data)
 
-if st.button("Start QnA"):
-    st.switch_page("pages/qna.py")
+pdf_check_request = {
+    "username":st.session_state.username
+}
+pdf_check_response = requests.get(f"http://127.0.0.1:8000/find_pdf?username={st.session_state.username}")
+print(f"ok ok ok---------{pdf_check_response.text}")
+pdf_check_json = pdf_check_response.json()
+if not pdf_check_json["bool"]:
+    file = st.file_uploader(label="Upload Resume",type='pdf')
+    if file:
+        files = {"file":(file.name,file,file.type)}
+        data = {"username":st.session_state.username}
+        # request = {
+        #     "file":file,
+        #     "username":st.session_state.username
+        # }
+        response = requests.post("http://127.0.0.1:8000/upload_pdf",files=files,data=data)
+        
+        response_data = response.json()
+        if response.status_code ==200:
+            st.success(response_data.get("message"))
+            st.rerun()
+        else:
+            st.error(response_data.get("message"))
+else:
+    st.markdown(
+        f"""
+        <div style="border: 1px solid #ccc; padding: 10px; width: 300px; height: 100px; overflow-y: auto; background-color: #f9f9f9;">
+            {pdf_check_json.get("filename")}
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+    if st.button("Remove PDF"):
+        response = requests.delete(f"http://127.0.0.1:8000/delete_pdf?username={st.session_state.username}")
+        st.rerun()
 
-if st.button("Analyse"):
-    st.switch_page("pages/analyse_pdf.py")
+    if st.button("Start QnA"):
+        st.switch_page("pages/qna.py")
 
-if st.button("AI Helper"):
-    st.switch_page("pages/chatbot.py")
+    if st.button("Analyse"):
+        st.switch_page("pages/analyse_pdf.py")
+
+    if st.button("AI Helper"):
+        st.switch_page("pages/ai_helper.py")
 
 if st.button("Logout"):
     session_id = st.session_state.session_id

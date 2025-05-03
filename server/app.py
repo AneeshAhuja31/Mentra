@@ -1,13 +1,21 @@
 from fastapi import FastAPI,Cookie,Response,Depends
 import streamlit as st
 from pydantic import BaseModel
-from database import find_user,insert_user,check_password
+from user_database import find_user,insert_user,check_password
 from cookie_auth import create_session,validate_session,end_session
+from pdf_gridfs_db import insert_pdf,find_pdf,delete_pdf
+from fastapi import UploadFile,Form
 app = FastAPI()
 from fastapi.responses import JSONResponse
+from pypdf import PdfReader
+
+
 class User_Request(BaseModel):
     username:str
     password:str
+
+class Upload_Request(BaseModel):
+    file:UploadFile
 
 @app.post('/login')
 async def login(request:User_Request):
@@ -80,6 +88,39 @@ async def logout(session_id:str = Cookie(None)):
     response = JSONResponse(content={"result":True,"message":"Logged out successfully!"})
     response.delete_cookie(key="session_id")
     return response
+
+@app.post("/upload_pdf")
+async def upload_pdf(file:UploadFile,username:str = Form(...)):
+    pdf_upload_data = await insert_pdf(file,username)
+    
+    reponse = {}
+    if pdf_upload_data:
+        message = pdf_upload_data['message']
+        file_id = str(pdf_upload_data['file_id'])
+        response = JSONResponse(content={
+            "message":message,
+            "file_id":file_id
+        })
+    else:
+        response = JSONResponse(content={
+            "message": "Failed to upload pdf to db"
+        })
+    return response
+    # if file:
+    #     reader = PdfReader(file)
+    #     raw_data = ""
+    #     for page in reader.pages:
+    #         raw_data+=page.extract_text()
+
+@app.get("/find_pdf")
+async def find_pdf_with_username(username:str):
+    return await find_pdf(username)
+    
+    
+@app.delete("/delete_pdf")
+async def delete_pdf_with_username(username:str):
+    return await delete_pdf(username)
+    
 
 if __name__ == "__main__":
     import uvicorn

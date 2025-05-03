@@ -1,0 +1,1 @@
+https://7c12-35-240-200-50.ngrok-free.app/api/generate
