@@ -10,7 +10,7 @@ pdffiles = AsyncIOMotorGridFSBucket(db,bucket_name="pdffiles")
 
 async def insert_pdf(file,username):
     file_data = await file.read()
-    file_name = f"{uuid.uuid4()}_{file.filename}"
+    file_name = file.filename
     file_id = await pdffiles.upload_from_stream(
         file_name,
         file_data,
@@ -49,3 +49,12 @@ async def delete_pdf(username):
     file_id = file["_id"]
     await pdffiles.delete(file_id)
     return {"deleted":True,"message":f"Deleted file: {filename}"}
+
+async def get_pdf(username):
+    cursor = pdffiles.find({"metadata.username":username},no_cursor_timeout=True)
+    file = await cursor.to_list(length=1)[0]
+    file_id = file["file_id"]
+    grid_out = await pdffiles.open_download_stream(file_id)
+    pdf_content = await grid_out.read()
+    return pdf_content
+    

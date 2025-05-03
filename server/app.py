@@ -3,12 +3,11 @@ import streamlit as st
 from pydantic import BaseModel
 from user_database import find_user,insert_user,check_password
 from cookie_auth import create_session,validate_session,end_session
-from pdf_gridfs_db import insert_pdf,find_pdf,delete_pdf
+from pdf_gridfs_db import insert_pdf,find_pdf,delete_pdf,get_pdf
+from chatbot import split_text,vectorstore_init,create_rag_chain,llm,prompt,qa_prompt
 from fastapi import UploadFile,Form
 app = FastAPI()
 from fastapi.responses import JSONResponse
-from pypdf import PdfReader
-
 
 class User_Request(BaseModel):
     username:str
@@ -120,7 +119,14 @@ async def find_pdf_with_username(username:str):
 @app.delete("/delete_pdf")
 async def delete_pdf_with_username(username:str):
     return await delete_pdf(username)
-    
+
+
+@app.post("/create_ragchain")
+async def create_ragchain(username):
+    pdf_content = await get_pdf(username)
+    splitted_text = await split_text(pdf_content)
+    vectorstore_retriever = await vectorstore_init(splitted_text,username)
+    rag_chain = await create_rag_chain(llm,prompt,vectorstore_retriever,qa_prompt)
 
 if __name__ == "__main__":
     import uvicorn
