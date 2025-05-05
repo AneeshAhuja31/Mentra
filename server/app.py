@@ -4,7 +4,9 @@ from pydantic import BaseModel
 from user_database import find_user,insert_user,check_password
 from cookie_auth import create_session,validate_session,end_session
 from pdf_gridfs_db import insert_pdf,find_pdf,delete_pdf,get_pdf
-from chatbot import split_text,vectorstore_init,create_rag_chain,llm,prompt,qa_prompt
+from chatbot import create_conversational_rag_chain
+from chathistory_db import get_chat_history,retrieve_chat_history
+from chat_mangement import insert_chat,find_chat,get_chats,delete_chat
 from fastapi import UploadFile,Form
 app = FastAPI()
 from fastapi.responses import JSONResponse
@@ -92,7 +94,7 @@ async def logout(session_id:str = Cookie(None)):
 async def upload_pdf(file:UploadFile,username:str = Form(...)):
     pdf_upload_data = await insert_pdf(file,username)
     
-    reponse = {}
+    response = {}
     if pdf_upload_data:
         message = pdf_upload_data['message']
         file_id = str(pdf_upload_data['file_id'])
@@ -121,12 +123,34 @@ async def delete_pdf_with_username(username:str):
     return await delete_pdf(username)
 
 
-@app.post("/create_ragchain")
-async def create_ragchain(username):
-    pdf_content = await get_pdf(username)
-    splitted_text = await split_text(pdf_content)
-    vectorstore_retriever = await vectorstore_init(splitted_text,username)
-    rag_chain = await create_rag_chain(llm,prompt,vectorstore_retriever,qa_prompt)
+# @app.post("/create_ragchain")
+# async def create_ragchain(username):
+#     pdf_content = await get_pdf(username)
+#     splitted_text = await split_text(pdf_content)
+#     vectorstore_retriever = await vectorstore_init(splitted_text,username)
+#     conversational_rag_chain = await create_conversational_rag_chain(llm,prompt,vectorstore_retriever,qa_prompt)
+
+@app.post("/new_chat")
+async def create_chat(chat_id,username,title):
+    return await insert_chat(chat_id,username,title)
+
+@app.get("/find_chat")
+async def retrieve_chat(chat_id):
+    return await find_chat(chat_id)
+
+@app.get("/get_chat_list")
+async def get_chat_list(username):
+    return await get_chats(username)
+
+@app.delete("/delete_chat")
+async def delete_chat_with_chat_id(chat_id):
+    return await delete_chat(chat_id)
+
+@app.get("/get_history")
+async def get_history(chat_id):
+    return await retrieve_chat_history(chat_id)
+
+
 
 if __name__ == "__main__":
     import uvicorn

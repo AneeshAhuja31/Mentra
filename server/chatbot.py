@@ -4,8 +4,11 @@ from langchain_core.prompts import ChatPromptTemplate,MessagesPlaceholder
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_chroma import Chroma
 from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_core.runnables.history import RunnableWithMessageHistory
 from langchain.chains import create_history_aware_retriever,create_retrieval_chain
 from langchain.chains.combine_documents import create_stuff_documents_chain
+from chathistory_db import get_chat_history
+from pdf_gridfs_db import get_pdf
 import os
 from io import BytesIO
 from dotenv import load_dotenv
@@ -66,10 +69,26 @@ async def vectorstore_init(text,username):
     vectorstore.persist()
     return vectorstore.as_retriever()
 
-async def create_rag_chain(llm,prompt,vectorstore_retriever,qa_prompt):
+
+async def create_conversational_rag_chain(llm,prompt,vectorstore_retriever,qa_prompt):
     history_aware_chain= create_history_aware_retriever(llm,vectorstore_retriever,prompt)
     qa_chain = create_stuff_documents_chain(llm,qa_prompt)
     rag_chain = create_retrieval_chain(history_aware_chain,qa_chain)
-    return rag_chain
+    conversational_rag_chain = RunnableWithMessageHistory(
+        rag_chain,
+        get_chat_history(),
+        input_messages_key="input",
+        history_messages_key="chat_history"
+    )
+    return conversational_rag_chain
+
+async def create_ragchain(username):
+    pdf_content = await get_pdf(username)
+    splitted_text = await split_text(pdf_content)
+    vectorstore_retriever = await vectorstore_init(splitted_text,username)
+    conversational_rag_chain = await create_conversational_rag_chain(llm,prompt,vectorstore_retriever,qa_prompt)
+    return conversational_rag_chain
+
+
 
 
