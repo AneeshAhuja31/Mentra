@@ -75,7 +75,7 @@ if not st.session_state.authenticated:
                         if not st.session_state.current_chat_history:
                             response = requests.get(f"http://127.0.0.1:8000/get_chat_history?chat_id={st.session_state.active_chat_id}")
                             response_data = response.json()
-                            st.session_state.current_chat_history = 
+                            st.session_state.current_chat_history = pass 
 
             else:
                 st.switch_page("pages/login_.py")

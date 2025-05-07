@@ -9,7 +9,6 @@ from langchain.chains import create_history_aware_retriever,create_retrieval_cha
 from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain.memory.chat_message_histories import MongoDBChatMessageHistory
 from chathistory_db import get_chat_history
-from pdf_gridfs_db import get_pdf
 import os
 import shutil
 from io import BytesIO
@@ -61,15 +60,8 @@ qa_prompt = ChatPromptTemplate.from_messages(
     ]
 )
 
-async def split_text(pdf_content):
-    pdf_file = BytesIO(pdf_content)
-    reader = PdfReader(pdf_file)
-    text = ""
-    for page in reader.pages:
-        text += page.extract_text()
-    print(text)
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size = 500,chunk_overlap=50)
-    return text_splitter.split_text(text)
+
+
 
 async def vectorstore_init(text,username):
     embeddings = HuggingFaceEmbeddings(model_name = "all-MiniLM-L6-v2")

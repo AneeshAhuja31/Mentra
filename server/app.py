@@ -3,8 +3,8 @@ import streamlit as st
 from pydantic import BaseModel
 from user_database import find_user,insert_user,check_password
 from cookie_auth import create_session,validate_session,end_session
-from pdf_gridfs_db import insert_pdf,find_pdf,delete_pdf,get_pdf
-from chatbot import create_conversational_rag_chain,vectorstore_init,delete_vectorstore,split_text
+from pdfname_db import insert_pdf_name,find_pdf_name,delete_pdf_name
+from chatbot import create_conversational_rag_chain,vectorstore_init,delete_vectorstore
 from chatbot import vectorstore_init_faiss,delete_vectorstore_faiss
 from chathistory_db import get_chat_history,retrieve_chat_history,insert_chat_message
 from chat_mangement import insert_chat,find_chat,get_chats,delete_chat
@@ -18,6 +18,11 @@ class User_Request(BaseModel):
 
 class Upload_Request(BaseModel):
     file:UploadFile
+
+class VectorStoreRequest(BaseModel):
+    username: str
+    splitted_text: list
+
 
 @app.post('/login')
 async def login(request:User_Request):
@@ -91,38 +96,12 @@ async def logout(session_id:str = Cookie(None)):
     response.delete_cookie(key="session_id")
     return response
 
-@app.post("/upload_pdf")
-async def upload_pdf(file:UploadFile,username:str = Form(...)):
-    pdf_upload_data = await insert_pdf(file,username)
-    
-    response = {}
-    if pdf_upload_data:
-        message = pdf_upload_data['message']
-        file_id = str(pdf_upload_data['file_id'])
-        response = JSONResponse(content={
-            "message":message,
-            "file_id":file_id
-        })
-    else:
-        response = JSONResponse(content={
-            "message": "Failed to upload pdf to db"
-        })
-    return response
-    # if file:
-    #     reader = PdfReader(file)
-    #     raw_data = ""
-    #     for page in reader.pages:
-    #         raw_data+=page.extract_text()
+
 
 @app.post("/initialize_vectorstore")
-async def initialize_vectorstore(username:str):
-    pdf_content = await get_pdf(username)
-    if pdf_content:
-        print("PDF content received")
-        print(pdf_content)
-    splitted_text = await split_text(pdf_content)
-    if splitted_text:
-        print("Text splitted successfully")
+async def initialize_vectorstore(request:VectorStoreRequest):
+    splitted_text = request.splitted_text
+    username = request.username
     await vectorstore_init_faiss(text=splitted_text,username=username)
     return {"message": "Vector store initialized successfully"}
 
@@ -131,14 +110,19 @@ async def delete_user_vectorstore(username):
     result = await delete_vectorstore_faiss(username)
     return result    
 
-@app.get("/find_pdf")
-async def find_pdf_with_username(username:str):
-    return await find_pdf(username)
+@app.post("/upload_pdf_name")
+async def upload_pdf_name_with_username(username,pdf_name):
+    return await insert_pdf_name(pdf_name,username)
+    
+
+@app.get("/find_pdf_name")
+async def find_pdf_name_with_username(username:str):
+    return await find_pdf_name(username)
     
     
-@app.delete("/delete_pdf")
-async def delete_pdf_with_username(username:str):
-    return await delete_pdf(username)
+@app.delete("/delete_pdf_name")
+async def delete_pdf_name_with_username(username:str):
+    return await delete_pdf_name(username)
 
 
 # @app.post("/create_ragchain")

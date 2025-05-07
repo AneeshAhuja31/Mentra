@@ -1,6 +1,7 @@
 import streamlit as st
 import requests
 from pypdf import PdfReader
+from langchain.text_splitter import RecursiveCharacterTextSplitter
 hide_sidebar_style = """
     <style>
         [data-testid="stSidebar"] {
@@ -65,6 +66,14 @@ if not st.session_state.authenticated:
     else:
         st.switch_page("pages/login_.py")
 
+def get_pdf_and_split_text(file):
+    pdf_reader = PdfReader(file)
+    text = ""
+    for page in pdf_reader.pages:
+        text += page.extract_text()
+    print(text)
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size = 500,chunk_overlap=50)
+    return text_splitter.split_text(text)
 
 st.title("Dashboard")
 st.write(f"Welcome, {st.session_state.username}!")
@@ -74,21 +83,30 @@ st.write("Let us start by uploading your resume!!")
 # pdf_check_request = {
 #     "username":st.session_state.username
 # }
-pdf_check_response = requests.get(f"http://127.0.0.1:8000/find_pdf?username={st.session_state.username}")
+pdf_check_response = requests.get(f"http://127.0.0.1:8000/find_pdf_name?username={st.session_state.username}")
 print(f"ok ok ok---------{pdf_check_response.text}")
 pdf_check_json = pdf_check_response.json()
 if not pdf_check_json["bool"]:
     file = st.file_uploader(label="Upload Resume",type='pdf')
+    
     if file:
         files = {"file":(file.name,file,file.type)}
         data = {"username":st.session_state.username}
         with st.spinner("Uploading and initializing vector store..."):
-            response = requests.post("http://127.0.0.1:8000/upload_pdf",files=files,data=data)
+            
+            response = requests.post(f"http://127.0.0.1:8000/upload_pdf_name?username={st.session_state.username}&pdf_name={file.name}")
             response_data = response.json()
 
             if response.status_code ==200:
                 print(response_data["message"])
-                init_vectorstore_response = requests.post(f"http://127.0.0.1:8000/initialize_vectorstore?username={st.session_state.username}")
+                splitted_text = get_pdf_and_split_text(file)
+                if splitted_text:
+                    print("Text splitted successfully")
+                vector_init_request = {
+                    "username":st.session_state.username,
+                    "splitted_text":splitted_text
+                }
+                init_vectorstore_response = requests.post(f"http://127.0.0.1:8000/initialize_vectorstore",json=vector_init_request)
                 if init_vectorstore_response.status_code == 200:
                     init_vectorstore_response_data = init_vectorstore_response.json()
                     print(init_vectorstore_response_data["message"])
@@ -108,7 +126,7 @@ else:
         unsafe_allow_html=True
     )
     if st.button("Remove PDF"):
-        pdf_delete_response = requests.delete(f"http://127.0.0.1:8000/delete_pdf?username={st.session_state.username}")
+        pdf_delete_response = requests.delete(f"http://127.0.0.1:8000/delete_pdf_name?username={st.session_state.username}")
         vectorstore_delete_response = requests.delete(f"http://127.0.0.1:8000/delete_vectorstore?username={st.session_state.username}")
         vectorstore_delete_response_data = vectorstore_delete_response.json()
         
