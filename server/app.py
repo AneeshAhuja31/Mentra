@@ -4,8 +4,9 @@ from pydantic import BaseModel
 from user_database import find_user,insert_user,check_password
 from cookie_auth import create_session,validate_session,end_session
 from pdf_gridfs_db import insert_pdf,find_pdf,delete_pdf,get_pdf
-from chatbot import create_conversational_rag_chain
-from chathistory_db import get_chat_history,retrieve_chat_history
+from chatbot import create_conversational_rag_chain,vectorstore_init,delete_vectorstore,split_text
+from chatbot import vectorstore_init_faiss,delete_vectorstore_faiss
+from chathistory_db import get_chat_history,retrieve_chat_history,insert_chat_message
 from chat_mangement import insert_chat,find_chat,get_chats,delete_chat
 from fastapi import UploadFile,Form
 app = FastAPI()
@@ -113,6 +114,23 @@ async def upload_pdf(file:UploadFile,username:str = Form(...)):
     #     for page in reader.pages:
     #         raw_data+=page.extract_text()
 
+@app.post("/initialize_vectorstore")
+async def initialize_vectorstore(username:str):
+    pdf_content = await get_pdf(username)
+    if pdf_content:
+        print("PDF content received")
+        print(pdf_content)
+    splitted_text = await split_text(pdf_content)
+    if splitted_text:
+        print("Text splitted successfully")
+    await vectorstore_init_faiss(text=splitted_text,username=username)
+    return {"message": "Vector store initialized successfully"}
+
+@app.delete("/delete_vectorstore")
+async def delete_user_vectorstore(username):
+    result = await delete_vectorstore_faiss(username)
+    return result    
+
 @app.get("/find_pdf")
 async def find_pdf_with_username(username:str):
     return await find_pdf(username)
@@ -146,9 +164,13 @@ async def get_chat_list(username):
 async def delete_chat_with_chat_id(chat_id):
     return await delete_chat(chat_id)
 
-@app.get("/get_history")
-async def get_history(chat_id):
-    return await retrieve_chat_history(chat_id)
+@app.get("/get_chat_history")
+async def get_chat_history(chat_id):
+    return await retrieve_chat_history(chat_id,rag=False)
+
+@app.post("/insert_chat_message")
+async def insert_a_chat_message(chat_id:str,role:str,content:str):
+    return await insert_chat_message(chat_id,role,content)
 
 
 

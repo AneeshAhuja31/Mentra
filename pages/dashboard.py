@@ -20,7 +20,7 @@ def get_cached_session():
         st.session_state.cached_session= {
             "authenticated":False,
             "username":None,
-            "session_id":None
+            "session_id":None,
         }
     return st.session_state.cached_session
 
@@ -36,11 +36,13 @@ if "username" not in st.session_state:
 if "session_id" not in st.session_state:
     st.session_state.session_id = cached_session.get("session_id",None)
 
+
+
 def update_session_cache():
     st.session_state.cached_session = {
         "authenticated":st.session_state.authenticated,
         "username":st.session_state.username,
-        "session_id":st.session_state.session_id
+        "session_id":st.session_state.session_id,
     }
     get_cached_session.clear()
     get_cached_session()
@@ -69,9 +71,9 @@ st.write(f"Welcome, {st.session_state.username}!")
 
 st.write("Let us start by uploading your resume!!")
 
-pdf_check_request = {
-    "username":st.session_state.username
-}
+# pdf_check_request = {
+#     "username":st.session_state.username
+# }
 pdf_check_response = requests.get(f"http://127.0.0.1:8000/find_pdf?username={st.session_state.username}")
 print(f"ok ok ok---------{pdf_check_response.text}")
 pdf_check_json = pdf_check_response.json()
@@ -80,18 +82,22 @@ if not pdf_check_json["bool"]:
     if file:
         files = {"file":(file.name,file,file.type)}
         data = {"username":st.session_state.username}
-        # request = {
-        #     "file":file,
-        #     "username":st.session_state.username
-        # }
-        response = requests.post("http://127.0.0.1:8000/upload_pdf",files=files,data=data)
-        
-        response_data = response.json()
-        if response.status_code ==200:
-            st.success(response_data.get("message"))
-            st.rerun()
-        else:
-            st.error(response_data.get("message"))
+        with st.spinner("Uploading and initializing vector store..."):
+            response = requests.post("http://127.0.0.1:8000/upload_pdf",files=files,data=data)
+            response_data = response.json()
+
+            if response.status_code ==200:
+                print(response_data["message"])
+                init_vectorstore_response = requests.post(f"http://127.0.0.1:8000/initialize_vectorstore?username={st.session_state.username}")
+                if init_vectorstore_response.status_code == 200:
+                    init_vectorstore_response_data = init_vectorstore_response.json()
+                    print(init_vectorstore_response_data["message"])
+                    st.success("PDF uploaded and vector store initialized successfully!")
+                    st.rerun()
+                else:
+                    st.error("Failed to initialize vector store.")
+            else:
+                st.error(response_data.get("message"))
 else:
     st.markdown(
         f"""
@@ -102,8 +108,16 @@ else:
         unsafe_allow_html=True
     )
     if st.button("Remove PDF"):
-        response = requests.delete(f"http://127.0.0.1:8000/delete_pdf?username={st.session_state.username}")
-        st.rerun()
+        pdf_delete_response = requests.delete(f"http://127.0.0.1:8000/delete_pdf?username={st.session_state.username}")
+        vectorstore_delete_response = requests.delete(f"http://127.0.0.1:8000/delete_vectorstore?username={st.session_state.username}")
+        vectorstore_delete_response_data = vectorstore_delete_response.json()
+        
+        if pdf_delete_response.status_code == 200 and vectorstore_delete_response.status_code == 200 and vectorstore_delete_response_data["success"]:
+            st.success("PDF and vector store deleted successfully")
+            st.rerun()
+        else:
+            st.error("Failed to delete PDF or vector store")
+        
 
     if st.button("Start QnA"):
         st.switch_page("pages/qna.py")
@@ -120,6 +134,8 @@ if st.button("Logout"):
     response = requests.get("http://127.0.0.1:8000/logout",cookies=cookie)
     response_data = response.json()
     if response_data.get('result'):
+        for key in list(st.session_state.keys()):
+            del st.session_state[key]
         get_cached_session().clear()
         st.session_state.authenticated = False
         st.session_state.username = None

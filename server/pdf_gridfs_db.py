@@ -2,6 +2,8 @@ from motor.motor_asyncio import AsyncIOMotorClient,AsyncIOMotorGridFSBucket
 import os
 from dotenv import load_dotenv
 import uuid
+from io import BytesIO
+from pypdf import PdfReader
 load_dotenv()
 mongo_db_uri = os.getenv("MONGO_URI")
 client = AsyncIOMotorClient(mongo_db_uri)
@@ -52,9 +54,17 @@ async def delete_pdf(username):
 
 async def get_pdf(username):
     cursor = pdffiles.find({"metadata.username":username},no_cursor_timeout=True)
-    file = await cursor.to_list(length=1)[0]
-    file_id = file["file_id"]
+    files = await cursor.to_list(length=1)
+    if not files:
+        return None
+    file = files[0]
+    file_id = file["_id"]
     grid_out = await pdffiles.open_download_stream(file_id)
-    pdf_content = await grid_out.read()
-    return pdf_content
+    pdf_binary = await grid_out.read()
+    # pdf_file = BytesIO(pdf_binary)
+    # reader = PdfReader(pdf_file)
+    # text = ""
+    # for page in reader.pages:
+    #     text+=page.extract_text()
+    return pdf_binary
     
