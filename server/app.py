@@ -4,28 +4,29 @@ from pydantic import BaseModel
 from user_database import find_user,insert_user,check_password
 from cookie_auth import create_session,validate_session,end_session
 from pdfname_db import insert_pdf_name,find_pdf_name,delete_pdf_name
-from chatbot import create_conversational_rag_chain,vectorstore_init,delete_vectorstore
-from chatbot import vectorstore_init_faiss,delete_vectorstore_faiss
-from chathistory_db import get_chat_history,retrieve_chat_history,insert_chat_message
+from chatbot import vectorstore_init_faiss,delete_vectorstore_faiss,create_ragchain
+from chathistory_adapter import get_chat_history_for_ui,insert_chat_history,delete_chat_history
 from chat_mangement import insert_chat,find_chat,get_chats,delete_chat
-from fastapi import UploadFile,Form
 app = FastAPI()
 from fastapi.responses import JSONResponse
+import time
 
-class User_Request(BaseModel):
+class UserRequest(BaseModel):
     username:str
     password:str
-
-class Upload_Request(BaseModel):
-    file:UploadFile
 
 class VectorStoreRequest(BaseModel):
     username: str
     splitted_text: list
 
+class ProcessMessageRequest(BaseModel):
+    chat_id:str
+    content:str
+    username:str
+
 
 @app.post('/login')
-async def login(request:User_Request):
+async def login(request:UserRequest):
     body = request.dict()
     username = body.get("username")
     password = body.get("password")
@@ -41,7 +42,7 @@ async def login(request:User_Request):
     return response
 
 @app.post('/signup')
-async def signup(request:User_Request):
+async def signup(request:UserRequest):
     body = request.dict()
     username = body.get("username")
     password = body.get("password")
@@ -125,13 +126,6 @@ async def delete_pdf_name_with_username(username:str):
     return await delete_pdf_name(username)
 
 
-# @app.post("/create_ragchain")
-# async def create_ragchain(username):
-#     pdf_content = await get_pdf(username)
-#     splitted_text = await split_text(pdf_content)
-#     vectorstore_retriever = await vectorstore_init(splitted_text,username)
-#     conversational_rag_chain = await create_conversational_rag_chain(llm,prompt,vectorstore_retriever,qa_prompt)
-
 @app.post("/new_chat")
 async def create_chat(chat_id,username,title):
     return await insert_chat(chat_id,username,title)
@@ -148,13 +142,30 @@ async def get_chat_list(username):
 async def delete_chat_with_chat_id(chat_id):
     return await delete_chat(chat_id)
 
-@app.get("/get_chat_history")
-async def get_chat_history(chat_id):
-    return await retrieve_chat_history(chat_id,rag=False)
+@app.get("/get_chat_history_for_ui")
+async def get_chat_history_for_ui_by_chat_id(chat_id):
+    return await get_chat_history_for_ui(chat_id)
 
-@app.post("/insert_chat_message")
-async def insert_a_chat_message(chat_id:str,role:str,content:str):
-    return await insert_chat_message(chat_id,role,content)
+@app.delete("/delete_chat_history")
+async def delete_chat_history_by_chat_id(chat_id):
+    return await delete_chat_history(chat_id)
+
+
+@app.post("/process_message")
+async def process_manage(request:ProcessMessageRequest):
+    chat_id = request.chat_id
+    content = request.content
+    username = request.username
+    await insert_chat_history(chat_id,"human",content)
+    
+    rag_chain = await create_ragchain(username)
+    response = await rag_chain.ainvoke(
+        {"input":content},
+        config={"configurable":{"session_id":chat_id}}
+    )
+    await insert_chat_history(chat_id,"ai",response["answer"])
+    
+    return {"response":response["answer"]}
 
 
 

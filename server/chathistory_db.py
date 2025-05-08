@@ -1,9 +1,9 @@
 from motor.motor_asyncio import AsyncIOMotorClient
-from langchain.memory.chat_message_histories import MongoDBChatMessageHistory
 from langchain_core.messages import HumanMessage,AIMessage
 import os
 import time
 from dotenv import load_dotenv
+import chathistory_db
 load_dotenv()
 
 mongodb_uri = os.getenv("MONGODB_URI")
@@ -11,7 +11,7 @@ client = AsyncIOMotorClient(mongodb_uri)
 db = client.mentra_db
 chat_histories = db.chat_history
 
-async def retrieve_chat_history(chat_id,rag:bool):
+async def retrieve_chat_history(chat_id,rag=True):
     chat_history_list = await chat_histories.find({"chat_id":chat_id}).sort("timestamp",1).to_list(length=None)
     if rag: #to input as chat history in rag chain
         messages = []
@@ -49,7 +49,6 @@ async def delete_chat_history(chat_id):
     return response
 
     
-
 def get_chat_history():
     return retrieve_chat_history
     

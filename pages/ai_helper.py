@@ -4,7 +4,7 @@ import random
 import requests
 import streamlit.components.v1 as components
 import uuid
-
+import asyncio
 @st.cache_resource
 def get_cached_session():
     if "cached_session" not in st.session_state:
@@ -14,7 +14,7 @@ def get_cached_session():
             "session_id":None,
             "chats":{},
             "active_chat_id":None,
-            "current_chat_history":{}
+            "current_chat_history":[]
         }
     return st.session_state.cached_session
 
@@ -36,7 +36,7 @@ if "active_chat_id" not in st.session_state:
     st.session_state.active_chat_id = cached_session.get("active_chat_id",None)
 
 if "current_chat_history" not in st.session_state:
-    st.session_state.current_chat_history = cached_session.get("current_chat_history",{})
+    st.session_state.current_chat_history = cached_session.get("current_chat_history",[])
 
 def update_session_cache():
     st.session_state.cached_session = {
@@ -72,11 +72,16 @@ if not st.session_state.authenticated:
                             }
                         update_session_cache()
 
-                        if not st.session_state.current_chat_history:
-                            response = requests.get(f"http://127.0.0.1:8000/get_chat_history?chat_id={st.session_state.active_chat_id}")
-                            response_data = response.json()
-                            st.session_state.current_chat_history = pass 
+                        if st.session_state.chats and not st.session_state.active_chat_id:
+                            st.session_state.active_chat_id = next(iter(st.session_state.chats))
+                            update_session_cache()
 
+                        if not st.session_state.current_chat_history:
+                            response = requests.get(f"http://127.0.0.1:8000/get_chat_history_for_ui?chat_id={st.session_state.active_chat_id}")
+                            if response.status_code == 200:
+                                response_data = response.json()
+                                st.session_state.current_chat_history = response_data
+                                update_session_cache()
             else:
                 st.switch_page("pages/login_.py")
         else:
@@ -105,13 +110,18 @@ def create_new_chat():
         st.session_state.chats[chat_id] = {
             "title":title
         }
-        st.session_state.active_state = chat_id
+        st.session_state.active_chat_id = chat_id
+        st.session_state.current_chat_history = []
         update_session_cache()
         st.rerun()
 
 def select_chat(chat_id):
     st.session_state.active_chat_id = chat_id
     insert_component(chat_id)
+    response = requests.get(f"http://127.0.0.1:8000/get_chat_history_for_ui?chat_id={chat_id}")
+    if response.status_code == 200:
+        response_data = response.json()
+        st.session_state.current_chat_history = response_data
     update_session_cache()
     st.rerun()
 
@@ -123,12 +133,24 @@ def delete_chat(chat_id):
         if chat_id in st.session_state.chats:
             del st.session_state.chats[chat_id]
         
+        delete_chat_history_response = requests.delete(f"http://127.0.0.1:8000/delete_chat_history?chat_id={chat_id}")
+        if delete_chat_history_response.status_code == 200:
+            delete_chat_history_response_data = delete_chat_history_response.json()
+            print(delete_chat_history_response_data["message"])
+        
         if chat_id == st.session_state.active_chat_id:
             if st.session_state.chats:
-                st.session_state.active_chat_id = next(iter(st.session_state.chats))
+                new_active_chat = next(iter(st.session_state.chats))
+                st.session_state.active_chat_id = new_active_chat
+                chathistory_for_ui_response = requests.get(f"http://127.0.0.1:8000/get_chat_history_for_ui?chat_id={new_active_chat}")
+                if chathistory_for_ui_response.status_code == 200:
+                    st.session_state.current_chat_history = chathistory_for_ui_response.json()
+                else:
+                    st.session_state.current_chat_history = []
             else:
                 st.session_state.active_chat_id = None
-
+                st.session_state.current_chat_history = []
+        
         update_session_cache()
         st.rerun()
     
@@ -155,37 +177,57 @@ def response_generator(text):
         yield word + " "
         time.sleep(0.05)
 
-if not st.session_state.active_chat_id and st.session_state.chats:
-    if st.session_state.chats:
-        st.session_state.active_chat_id = next(iter(st.session_state.chats))
+async def process_message(chat_id,prompt):
+    doc = {
+        "chat_id":chat_id,
+        "content":prompt,
+        "username":st.session_state.username
+    }
+    response = requests.post(f"http://127.0.0.1:8000/process_message",json=doc)
+    if response.status_code == 200:
+        response_data = response.json()
+        return response_data['response']
     else:
-        st.session_state.active_chat_id = None
-    update_session_cache()
+        return "Sorry, I encountered an error processing your request"
 
+# if not st.session_state.active_chat_id and st.session_state.chats:
+#     if st.session_state.chats:
+#         st.session_state.active_chat_id = next(iter(st.session_state.chats))
+#     else:
+#         st.session_state.active_chat_id = None
+#     update_session_cache()
 
+if st.session_state.active_chat_id:
+    title = st.session_state.chats[st.session_state.active_chat_id]["title"]
+    st.header(f"Chat: {title}")
 
-# if st.session_state.active_chat_id:
-#     title = st.session_state.chats[st.session_state.active_chat_id]["title"]
-#     st.header(f"Chat: {title}")
-#     if not st.session_state.current_chat_history:
-#         response = requests.get(f"http://127.0.0.1:8000/get_chat_history?chat_id={st.session_state.active_chat_id}")
-#         if response.status_code == 200: 
-#             response_data = response.json()
-#             for chat_info in response_data:
-#                 if chat_info["role"] == "human":
-#                     st.chat_message("user").markdown(chat_info["content"])
-#                 elif chat_info["role"] == "ai":
-#                     st.chat_message("assistant").markdown(chat_info["content"])
+    if st.session_state.current_chat_history:
+        for chat_info in st.session_state.current_chat_history:
+            if chat_info["role"] == "human":
+                st.chat_message("user").markdown(chat_info["content"])
+            elif chat_info["role"] == "ai":
+                st.chat_message("assistant").markdown(chat_info["content"])
+            
 
     if prompt := st.chat_input("Type your message..."):
-        insert_response = requests.post(f"http://127.0.0.1:8000/insert_chat_message?chat_id={st.session_state.active_chat_id}&role='human'&content={prompt}")
-        insert_response_data = insert_response.json()
-        print(insert_response_data["messages"])
+        # insert_response = requests.post(f"http://127.0.0.1:8000/insert_chat_message?chat_id={st.session_state.active_chat_id}&role='human'&content={prompt}")
+        # insert_response_data = insert_response.json()
+        # print(insert_response_data["messages"])
         st.chat_message("user").markdown(prompt)
-
+        st.session_state.current_chat_history.append({
+            "role":"human",
+            "content":prompt
+        })
+        update_session_cache()
+        with st.spinner("Thinking..."):
+            response_text = asyncio.run(process_message(st.session_state.active_chat_id,prompt))
         ######### work on rag here
-        
-        st.chat_message("assistant").write_stream(response_generator(f"You said:{prompt}"))
+        st.chat_message("assistant").write_stream(response_generator(response_text))
+        st.session_state.current_chat_history.append({
+            "role":"ai",
+            "content":response_text
+        })
+        update_session_cache()
 else:
     st.info("Create a new chat to get started!")
 
@@ -193,17 +235,3 @@ else:
 
 
 
-
-# for message in st.session_state.messages:
-#     with st.chat_message(message["role"]):
-#         st.markdown(message["content"])
-
-# if prompt := st.chat_input("What is up?"):
-#     st.session_state.messages.append({"role": "user", "content": prompt})
-#     with st.chat_message("user"):
-#         st.markdown(prompt)
-
-#     with st.chat_message("assistant"):
-#         response = st.write_stream(response_generator())
-
-#     st.session_state.messages.append({"role": "assistant", "content": response})
