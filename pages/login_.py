@@ -10,6 +10,9 @@ hide_sidebar_style = """
         [data-testid="collapsedControl"] {
             display: none;
         }
+        [data-testid ="stSidebarCollapsedControl"] {
+            display: none;
+        }
     </style>
 """
 st.markdown(hide_sidebar_style, unsafe_allow_html=True)
@@ -85,21 +88,6 @@ if "session_id" not in st.session_state:
 if verify_session():
     st.switch_page("pages/dashboard.py")
 
-# if not st.session_state.authenticated and st.session_state.session_id:
-#     cookie = {"session_id":st.session_state.session_id}
-#     response = requests.get("http://127.0.0.1:8000/validate_session",cookies=cookie)
-#     if response.status_code == 200:
-#         body = response.json()
-#         if body.get("authenticated",False):
-#             st.session_state.authenticated = True
-#             st.session_state.username = body.get("username")
-#             update_session_cache()
-#             st.switch_page("pages/dashboard.py")
-#         else:
-#             st.session_state.authenticated = False
-#             st.session_state.session_id = None
-#             update_session_cache()
-
 with st.container(border=True):
     st.subheader("Login")
     username = st.text_input("Enter username")
@@ -137,4 +125,5 @@ with st.container(border=True):
     if st.button("Signup!"):
         st.switch_page("pages/signup_.py")
 
-    # st.markdown('<a href="http://localhost:8501/pages/signup_.py" target="_self">Go to Signup Page</a>',unsafe_allow_html=True)
+if st.button("← Go to Homepage"):
+    st.switch_page("streamlit_.py")
