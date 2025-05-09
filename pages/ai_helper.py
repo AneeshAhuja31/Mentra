@@ -1,6 +1,5 @@
 import streamlit as st
 import time 
-import random
 import requests
 import streamlit.components.v1 as components
 import uuid
@@ -191,9 +190,16 @@ with st.sidebar:
                     delete_chat(chat_id)
 
 def response_generator(text):
-    for word in text.split():
-        yield word + " "
-        time.sleep(0.05)
+    paragraphs = text.split("\n")
+    for i,paragraph in enumerate(paragraphs):
+        if paragraph:
+            words = paragraph.split(" ")
+            for word in words:
+                yield word + " "
+                time.sleep(0.02)
+            
+            if i < len(paragraphs) - 1:
+                yield "\n"
 
 async def process_message(chat_id,prompt):
     doc = {
