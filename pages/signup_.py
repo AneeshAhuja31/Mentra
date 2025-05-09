@@ -9,6 +9,9 @@ hide_sidebar_style = """
         [data-testid="collapsedControl"] {
             display: none;
         }
+        [data-testid="stSidebarCollapsedControl"] {
+            display: none;
+        }
     </style>
 """
 st.markdown(hide_sidebar_style, unsafe_allow_html=True)
@@ -124,5 +127,8 @@ with st.container (border= True):
     if st.session_state.signup_success:
         if st.button("Login"):
             st.switch_page("pages/login_.py")
+
+if st.button("← Go to Homepage"):
+    st.switch_page("streamlit_.py")
 
         

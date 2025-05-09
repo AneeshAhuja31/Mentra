@@ -10,6 +10,9 @@ hide_sidebar_style = """
         [data-testid="collapsedControl"] {
             display: none;
         }
+        [class="st-emotion-cache-169dgwr e19011e615"] {
+            display: none;
+        }
     </style>
 """
 st.markdown(hide_sidebar_style, unsafe_allow_html=True)

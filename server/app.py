@@ -179,6 +179,10 @@ async def process_manage(request:ProcessMessageRequest):
     
     return {"response":response["answer"]}
 
+@app.get("/generate_qna")
+async def generate_qna():
+    pass
+
 
 
 if __name__ == "__main__":

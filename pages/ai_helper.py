@@ -4,6 +4,15 @@ import requests
 import streamlit.components.v1 as components
 import uuid
 import asyncio
+
+hide_default_navigation = """
+    <style>
+        [data-testid="stSidebarNav"] {
+            display: none;
+        }
+    </style>
+"""
+st.markdown(hide_default_navigation, unsafe_allow_html=True)
 @st.cache_resource
 def get_cached_session():
     if "cached_session" not in st.session_state:
