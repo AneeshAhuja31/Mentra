@@ -2,6 +2,7 @@ from motor.motor_asyncio import AsyncIOMotorClient
 import os
 from dotenv import load_dotenv
 import time
+from bson import ObjectId
 load_dotenv()
 
 mongodb_uri = os.getenv("MONGODB_URI")
@@ -37,10 +38,16 @@ async def find_chat(chat_id):
             "message":f"Chat with chat_id: {chat_id} found!"
         }
     return response
+def serialize_document(document):
+    if isinstance(document, dict):
+        return {key: (str(value) if isinstance(value, ObjectId) else value) for key, value in document.items()}
+    return document
 
 async def get_chats(username):
     result = await chats.find({"username":username}).to_list(length=None)
-    return result
+    chat_list = [serialize_document(chat) for chat in result]
+    return {"chat_list":chat_list}
+
 
 async def delete_chat(chat_id):
     result = await chats.delete_one({"chat_id":chat_id})
@@ -48,6 +55,14 @@ async def delete_chat(chat_id):
     if result.deleted_count:
         response = {"message":f"Chat with chat_id: {chat_id} deleted successfully!"}
     return response
+
+async def delete_chat_list(username:str):
+    result = await chats.delete_many({"username":username})
+    response = {"message":f"No chats found for {username}"}
+    if result.deleted_count:
+        response = {"message":f"Deleted all chats of {username}"}
+    return response
+
 
     
     

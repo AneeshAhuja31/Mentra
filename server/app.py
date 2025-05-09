@@ -5,8 +5,8 @@ from user_database import find_user,insert_user,check_password
 from cookie_auth import create_session,validate_session,end_session
 from pdfname_db import insert_pdf_name,find_pdf_name,delete_pdf_name
 from chatbot import vectorstore_init_faiss,delete_vectorstore_faiss,create_ragchain
-from chathistory_adapter import get_chat_history_for_ui,insert_chat_history,delete_chat_history
-from chat_mangement import insert_chat,find_chat,get_chats,delete_chat
+from chathistory_adapter import get_chat_history_for_ui,insert_chat_history,delete_chat_history,delete_complete_chat_history
+from chat_mangement import insert_chat,find_chat,get_chats,delete_chat,delete_chat_list
 app = FastAPI()
 from fastapi.responses import JSONResponse
 import time
@@ -23,6 +23,7 @@ class ProcessMessageRequest(BaseModel):
     chat_id:str
     content:str
     username:str
+
 
 
 @app.post('/login')
@@ -134,6 +135,8 @@ async def create_chat(chat_id,username,title):
 async def retrieve_chat(chat_id):
     return await find_chat(chat_id)
 
+
+
 @app.get("/get_chat_list")
 async def get_chat_list(username):
     return await get_chats(username)
@@ -142,13 +145,22 @@ async def get_chat_list(username):
 async def delete_chat_with_chat_id(chat_id):
     return await delete_chat(chat_id)
 
+@app.delete("/delete_chat_list")
+async def delete_chat_list_with_username(username:str):
+    return await delete_chat_list(username)
+
+
 @app.get("/get_chat_history_for_ui")
 async def get_chat_history_for_ui_by_chat_id(chat_id):
     return await get_chat_history_for_ui(chat_id)
 
-@app.delete("/delete_chat_history")
+@app.delete("/delete_chat_history_by_chat_id")
 async def delete_chat_history_by_chat_id(chat_id):
     return await delete_chat_history(chat_id)
+
+@app.delete("/delete_complete_chat_history")
+async def delete_chat_history_by_username(username):
+    return await delete_complete_chat_history(username)
 
 
 @app.post("/process_message")
@@ -156,14 +168,14 @@ async def process_manage(request:ProcessMessageRequest):
     chat_id = request.chat_id
     content = request.content
     username = request.username
-    await insert_chat_history(chat_id,"human",content)
+    await insert_chat_history(chat_id,"human",content,username)
     
     rag_chain = await create_ragchain(username)
     response = await rag_chain.ainvoke(
         {"input":content},
         config={"configurable":{"session_id":chat_id}}
     )
-    await insert_chat_history(chat_id,"ai",response["answer"])
+    await insert_chat_history(chat_id,"ai",response["answer"],username)
     
     return {"response":response["answer"]}
 

@@ -14,7 +14,6 @@ hide_sidebar_style = """
 """
 st.markdown(hide_sidebar_style, unsafe_allow_html=True)
 
-#caching a session state variable 'cached_session' since session variables get lost on reloading
 @st.cache_resource
 def get_cached_session():
     if "cached_session" not in st.session_state:
@@ -22,8 +21,44 @@ def get_cached_session():
             "authenticated":False,
             "username":None,
             "session_id":None,
+            "chats":{},
+            "active_chat_id":None,
+            "current_chat_history":[]
         }
     return st.session_state.cached_session
+
+def update_session_cache():
+    st.session_state.cached_session = {
+        "authenticated":st.session_state.authenticated,
+        "username":st.session_state.username,
+        "session_id":st.session_state.session_id,
+        "chats":st.session_state.get("chats",{}),
+        "active_chat_id":st.session_state.get("active_chat_id",None),
+        "current_chat_history":st.session_state.get("current_chat_history",[])
+    }
+    get_cached_session.clear()
+    get_cached_session()
+
+def verify_authentication():
+    try:
+        session_id = st.session_state.session_id
+        if not session_id:
+            return False
+        cookie = {"session_id":session_id}
+        response = requests.get("http://127.0.0.1:8000/validate_session",cookies=cookie)
+        if response.status_code == 200:
+            data = response.json()
+            if data["authenticated"]:
+                st.session_state.authenticated = True
+                st.session_state.username = data["username"]
+                update_session_cache()
+                return True
+        st.session_state.authenticated = False
+        update_session_cache()
+        return False
+    except requests.exceptions.RequestException as e:
+        st.error(f"Server connection error.{e}")
+        return st.session_state.authenticated
 
 cached_session = get_cached_session()
 
@@ -33,38 +68,37 @@ if "authenticated" not in st.session_state:
 if "username" not in st.session_state:
     st.session_state.username = cached_session.get("username",None)
 
-
 if "session_id" not in st.session_state:
     st.session_state.session_id = cached_session.get("session_id",None)
 
+if "chats" not in st.session_state:
+    st.session_state.chats = cached_session.get("chats",{})
 
+if "active_chat_id" not in st.session_state:
+    st.session_state.active_chat_id = cached_session.get("active_chat_id",None)
 
-def update_session_cache():
-    st.session_state.cached_session = {
-        "authenticated":st.session_state.authenticated,
-        "username":st.session_state.username,
-        "session_id":st.session_state.session_id,
-    }
-    get_cached_session.clear()
-    get_cached_session()
+if "current_chat_history" not in st.session_state:
+    st.session_state.current_chat_history = cached_session.get("current_chat_history",[])
 
-if not st.session_state.authenticated:
-    session_id = st.session_state.get("session_id",None)
-    if session_id:
-        cookie = {"session_id":session_id}
-        response = requests.get("http://127.0.0.1:8000/validate_session",cookies=cookie)
-        if response.status_code == 200:
-            data = response.json()
-            if data['authenticated']:
-                st.session_state.authenticated = True
-                st.session_state.username = data["username"]
-                update_session_cache()
-            else:
-                st.switch_page("pages/login_.py")
-        else:
-            st.switch_page("pages/login_.py")
-    else:
-        st.switch_page("pages/login_.py")
+if not verify_authentication():
+    st.switch_page("pages/login_.py")
+# if not st.session_state.authenticated:
+#     session_id = st.session_state.get("session_id",None)
+#     if session_id:
+#         cookie = {"session_id":session_id}
+#         response = requests.get("http://127.0.0.1:8000/validate_session",cookies=cookie)
+#         if response.status_code == 200:
+#             data = response.json()
+#             if data['authenticated']:
+#                 st.session_state.authenticated = True
+#                 st.session_state.username = data["username"]
+#                 update_session_cache()
+#             else:
+#                 st.switch_page("pages/login_.py")
+#         else:
+#             st.switch_page("pages/login_.py")
+#     else:
+#         st.switch_page("pages/login_.py")
 
 def get_pdf_and_split_text(file):
     pdf_reader = PdfReader(file)
@@ -78,7 +112,6 @@ def get_pdf_and_split_text(file):
 st.title("Dashboard")
 st.write(f"Welcome, {st.session_state.username}!")
 
-st.write("Let us start by uploading your resume!!")
 
 # pdf_check_request = {
 #     "username":st.session_state.username
@@ -87,6 +120,7 @@ pdf_check_response = requests.get(f"http://127.0.0.1:8000/find_pdf_name?username
 print(f"ok ok ok---------{pdf_check_response.text}")
 pdf_check_json = pdf_check_response.json()
 if not pdf_check_json["bool"]:
+    st.write("Let us start by uploading your resume!!")
     file = st.file_uploader(label="Upload Resume",type='pdf')
     
     if file:
@@ -127,14 +161,25 @@ else:
     )
     if st.button("Remove PDF"):
         pdf_delete_response = requests.delete(f"http://127.0.0.1:8000/delete_pdf_name?username={st.session_state.username}")
-        vectorstore_delete_response = requests.delete(f"http://127.0.0.1:8000/delete_vectorstore?username={st.session_state.username}")
-        vectorstore_delete_response_data = vectorstore_delete_response.json()
-        
-        if pdf_delete_response.status_code == 200 and vectorstore_delete_response.status_code == 200 and vectorstore_delete_response_data["success"]:
-            st.success("PDF and vector store deleted successfully")
-            st.rerun()
-        else:
-            st.error("Failed to delete PDF or vector store")
+        if pdf_delete_response.status_code == 200:
+            vectorstore_delete_response = requests.delete(f"http://127.0.0.1:8000/delete_vectorstore?username={st.session_state.username}")
+            vectorstore_delete_response_data = vectorstore_delete_response.json()
+            if vectorstore_delete_response.status_code == 200:
+                chat_delete_response = requests.delete(f"http://127.0.0.1:8000/delete_chat_list?username={st.session_state.username}")
+                if chat_delete_response.status_code == 200:
+                    chat_history_delete_response = requests.delete(f"http://127.0.0.1:8000/delete_complete_chat_history?username={st.session_state.username}")
+                    if chat_history_delete_response.status_code == 200:
+                        st.session_state.chats = {}
+                        st.session_state.active_chat_id = None
+                        st.session_state.current_chat_history = []
+                        update_session_cache()
+                
+                
+                        if vectorstore_delete_response_data["success"]:
+                            st.success("PDF and vector store deleted successfully")
+                            st.rerun()
+                        else:
+                            st.error("Failed to delete PDF or vector store")
         
 
     if st.button("Start QnA"):
@@ -154,15 +199,9 @@ if st.button("Logout"):
     if response_data.get('result'):
         for key in list(st.session_state.keys()):
             del st.session_state[key]
-        get_cached_session().clear()
         st.session_state.authenticated = False
         st.session_state.username = None
         st.session_state.session_id = None
-        st.session_state.cached_session = {
-            "authenticated":False,
-            "username":None,
-            "session_id":None
-        }
-        get_cached_session()
+        update_session_cache()
         st.switch_page('streamlit_.py')
 

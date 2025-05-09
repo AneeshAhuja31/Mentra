@@ -10,11 +10,12 @@ client = AsyncIOMotorClient(mongodb_uri)
 db = client.mentra_db
 chat_history = db.chat_history
 
-async def insert_chat_history(chat_id:str,role:str,content:str):
+async def insert_chat_history(chat_id:str,role:str,content:str,username:str):
     result = await chat_history.insert_one({
         "chat_id":chat_id,
         "role":role,
         "content":content,
+        "username":username,
         "timestamp":time.time()
     })
     response = {"message":f"Unable to insert chat history for {chat_id}"}
@@ -42,6 +43,19 @@ async def delete_chat_history(chat_id:str):
         response = {
             "deleted":True,
             "message":f"Deleted chat history of {chat_id}"
+        }
+    return response
+
+async def delete_complete_chat_history(username):
+    delete_response = await chat_history.delete_many({"username":username})
+    response = {
+        "deleted":False,
+        "message":f"Unable to deleted / Chat history of {username} not found!"
+    }
+    if delete_response.deleted_count:
+        response = {
+            "deleted":True,
+            "message":f"Deleted complete chat history of {username}"
         }
     return response
     

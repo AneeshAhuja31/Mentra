@@ -18,7 +18,20 @@ def get_cached_session():
         }
     return st.session_state.cached_session
 
+def update_session_cache():
+    st.session_state.cached_session = {
+        "authenticated":st.session_state.authenticated,
+        "username":st.session_state.username,
+        "session_id":st.session_state.session_id,
+        "chats":st.session_state.chats,
+        "active_chat_id":st.session_state.active_chat_id,
+        "current_chat_history":st.session_state.current_chat_history
+    }
+    get_cached_session.clear()
+    get_cached_session()
+
 cached_session = get_cached_session()
+
 
 if "authenticated" not in st.session_state:
     st.session_state.authenticated = cached_session.get("authenticated",False)
@@ -38,56 +51,64 @@ if "active_chat_id" not in st.session_state:
 if "current_chat_history" not in st.session_state:
     st.session_state.current_chat_history = cached_session.get("current_chat_history",[])
 
-def update_session_cache():
-    st.session_state.cached_session = {
-        "authenticated":st.session_state.authenticated,
-        "username":st.session_state.username,
-        "session_id":st.session_state.session_id,
-        "chats":st.session_state.chats,
-        "active_chat_id":st.session_state.active_chat_id,
-        "current_chat_history":st.session_state.current_chat_history
-    }
-    get_cached_session.clear()
-    get_cached_session()
 
-if not st.session_state.authenticated:
-    session_id = st.session_state.get("session_id",None)
-    if session_id:
-        cookie = {"session_id":session_id}
-        response = requests.get("http://127.0.0.1:8000/validate_session",cookies=cookie)
+def verify_authentication():
+    try:
+        session_id = st.session_state.session_id
+        if not session_id:
+            return False
+        
+        cookie = {"session_id": session_id}
+        response = requests.get("http://127.0.0.1:8000/validate_session", cookies=cookie)
+        
         if response.status_code == 200:
             data = response.json()
-            if data['authenticated']:
+            if data["authenticated"]:
                 st.session_state.authenticated = True
                 st.session_state.username = data["username"]
                 update_session_cache()
+                return True
+                
+        
+        st.session_state.authenticated = False
+        update_session_cache()
+        return False
+    except requests.exceptions.RequestException as e:
+        st.error(f"Server connection error: {e}")
+        return st.session_state.authenticated
 
-                if not st.session_state.chats:
-                    response = requests.get(f"http://127.0.0.1:8000/get_chat_list?username={st.session_state.username}")
-                    if response.status_code == 200:
-                        chats_data = response.json()
-                        for chat in chats_data:
-                            st.session_state.chats[chat["chat_id"]] = {
-                                "title":chat["title"]
-                            }
-                        update_session_cache()
 
-                        if st.session_state.chats and not st.session_state.active_chat_id:
-                            st.session_state.active_chat_id = next(iter(st.session_state.chats))
-                            update_session_cache()
 
-                        if not st.session_state.current_chat_history:
-                            response = requests.get(f"http://127.0.0.1:8000/get_chat_history_for_ui?chat_id={st.session_state.active_chat_id}")
-                            if response.status_code == 200:
-                                response_data = response.json()
-                                st.session_state.current_chat_history = response_data
-                                update_session_cache()
-            else:
-                st.switch_page("pages/login_.py")
-        else:
-            st.switch_page("pages/login_.py")
-    else:
-        st.switch_page("pages/login_.py")
+if not verify_authentication():
+    st.switch_page("pages/login_.py")
+
+
+pdf_name_check_response = requests.get(f"http://127.0.0.1:8000/find_pdf_name?username={st.session_state.username}")
+if pdf_name_check_response.status_code == 200:
+    pdf_name_check_response_data = pdf_name_check_response.json()
+    if not pdf_name_check_response_data["bool"]:
+        st.switch_page("pages/dashboard.py")
+
+chat_list_response = requests.get(f"http://127.0.0.1:8000/get_chat_list?username={st.session_state.username}")
+if chat_list_response.status_code == 200:
+    chats_list_response_json = chat_list_response.json()
+    chats_data = chats_list_response_json["chat_list"]
+    for chat in chats_data:
+        st.session_state.chats[chat["chat_id"]] = {
+            "title":chat["title"]
+        }
+
+    if st.session_state.chats and not st.session_state.active_chat_id:
+        st.session_state.active_chat_id = next(iter(st.session_state.chats))
+
+    if st.session_state.active_chat_id:
+        chat_history_response = requests.get(f"http://127.0.0.1:8000/get_chat_history_for_ui?chat_id={st.session_state.active_chat_id}")
+        if chat_history_response.status_code == 200:
+            st.session_state.current_chat_history = chat_history_response.json()
+    
+    update_session_cache()
+
+
 
 def insert_component(chat_id):
     components.html(f"""
@@ -133,7 +154,7 @@ def delete_chat(chat_id):
         if chat_id in st.session_state.chats:
             del st.session_state.chats[chat_id]
         
-        delete_chat_history_response = requests.delete(f"http://127.0.0.1:8000/delete_chat_history?chat_id={chat_id}")
+        delete_chat_history_response = requests.delete(f"http://127.0.0.1:8000/delete_chat_history_by_chat_id?chat_id={chat_id}")
         if delete_chat_history_response.status_code == 200:
             delete_chat_history_response_data = delete_chat_history_response.json()
             print(delete_chat_history_response_data["message"])
@@ -153,8 +174,6 @@ def delete_chat(chat_id):
         
         update_session_cache()
         st.rerun()
-    
-
 
 with st.sidebar:
     st.title("Chat History")
@@ -172,7 +191,6 @@ with st.sidebar:
                     delete_chat(chat_id)
 
 def response_generator(text):
-    #text = random.choice(["Hi how can I help you?", "Hi how are you?", "Happy to help you!!"])
     for word in text.split():
         yield word + " "
         time.sleep(0.05)
@@ -190,16 +208,9 @@ async def process_message(chat_id,prompt):
     else:
         return "Sorry, I encountered an error processing your request"
 
-# if not st.session_state.active_chat_id and st.session_state.chats:
-#     if st.session_state.chats:
-#         st.session_state.active_chat_id = next(iter(st.session_state.chats))
-#     else:
-#         st.session_state.active_chat_id = None
-#     update_session_cache()
-
-if st.session_state.active_chat_id:
+if st.session_state.active_chat_id and st.session_state.active_chat_id in st.session_state.chats:
     title = st.session_state.chats[st.session_state.active_chat_id]["title"]
-    st.header(f"Chat: {title}")
+    st.title(f"Chat: {title}")
 
     if st.session_state.current_chat_history:
         for chat_info in st.session_state.current_chat_history:
@@ -210,9 +221,6 @@ if st.session_state.active_chat_id:
             
 
     if prompt := st.chat_input("Type your message..."):
-        # insert_response = requests.post(f"http://127.0.0.1:8000/insert_chat_message?chat_id={st.session_state.active_chat_id}&role='human'&content={prompt}")
-        # insert_response_data = insert_response.json()
-        # print(insert_response_data["messages"])
         st.chat_message("user").markdown(prompt)
         st.session_state.current_chat_history.append({
             "role":"human",
