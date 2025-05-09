@@ -13,32 +13,16 @@ hide_sidebar_style = """
 """
 st.markdown(hide_sidebar_style, unsafe_allow_html=True)
 
-if "authenticated" not in st.session_state:
-    st.session_state.authenticated = False
-
-if "signup_success" not in st.session_state:
-    st.session_state.signup_success = False
-
-
-
-if st.session_state.authenticated == True:
-    session_id = st.session_state.session_id
-    cookie = {"session_id":session_id}
-    response = requests.get("http://127.0.0.1:8000/validate_session",cookies=cookie)
-    if response.status_code == 200:
-        body = response.json()
-        if body.get("authenticated",True):
-            st.session_state.authenticated = True
-            st.session_state.username = body.get("username")
-            st.switch_page("pages/dashboard.py")
-
 @st.cache_resource
 def get_cached_session():
     if "cached_session" not in st.session_state:
         st.session_state.cached_session= {
             "authenticated":False,
             "username":None,
-            "session_id":None
+            "session_id":None,
+            "chats":{},
+            "active_chat_id":None,
+            "current_chat_history":[]
         }
     return st.session_state.cached_session
 
@@ -46,14 +30,74 @@ def update_session_cache():
     st.session_state.cached_session = {
         "authenticated":st.session_state.authenticated,
         "username":st.session_state.username,
-        "session_id":st.session_state.session_id
+        "session_id":st.session_state.session_id,
+        "chats":st.session_state.get("chats",{}),
+        "active_chat_id":st.session_state.get("active_chat_id",None),
+        "current_chat_history":st.session_state.get("current_chat_history",[])
+
     }
     get_cached_session.clear()
     get_cached_session()
 
+def verify_session():
+    try:
+        session_id = st.session_state.get("session_id",None)
+        if not session_id:
+            st.session_state.authenticated = False
+            st.session_state.username = None
+            update_session_cache()
+            return False
+        
+        cookie = {"session_id":session_id}
+        try:
+            response = requests.get("http://127.0.0.1:8000/validate_session",cookies=cookie)
+
+            if response.status_code == 200:
+                data = response.json()
+                if data["authenticated"]:
+                    st.session_state.authenticated = True
+                    st.session_state.username = data.get("username")
+                    update_session_cache()
+                    return True
+                
+                st.session_state.authenticated = False
+                st.session_state.username = None
+                st.session_state.session_id = None
+                update_session_cache()
+                return False
+        except requests.exceptions.RequestException:
+            return st.session_state.authenticated
+    except Exception:
+        return st.session_state.authenticated
+
 cached_session = get_cached_session()
-if cached_session.get('authenticated',False) == True:
+
+if "authenticated" not in st.session_state:
+    st.session_state.authenticated = cached_session.get("authenticated",False)
+
+if "username" not in st.session_state:
+    st.session_state.username = cached_session.get("username",None)
+
+if "session_id" not in st.session_state:
+    st.session_state.session_id = cached_session.get("session_id",None)
+
+if "signup_success" not in st.session_state:
+    st.session_state.signup_success = False
+
+if verify_session():
     st.switch_page("pages/dashboard.py")
+
+
+# if st.session_state.authenticated == True:
+#     session_id = st.session_state.session_id
+#     cookie = {"session_id":session_id}
+#     response = requests.get("http://127.0.0.1:8000/validate_session",cookies=cookie)
+#     if response.status_code == 200:
+#         body = response.json()
+#         if body.get("authenticated",True):
+#             st.session_state.authenticated = True
+#             st.session_state.username = body.get("username")
+#             st.switch_page("pages/dashboard.py")
 
 with st.container (border= True):
     st.subheader("Signup")
