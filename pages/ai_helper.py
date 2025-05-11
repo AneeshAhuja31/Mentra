@@ -10,6 +10,7 @@ hide_default_navigation = """
         [data-testid="stSidebarNav"] {
             display: none;
         }
+    
     </style>
 """
 st.markdown(hide_default_navigation, unsafe_allow_html=True)
@@ -22,7 +23,10 @@ def get_cached_session():
             "session_id":None,
             "chats":{},
             "active_chat_id":None,
-            "current_chat_history":[]
+            "current_chat_history":[],
+            "qna": [],
+            "selected_choices": {},
+            "input_disabled":False
         }
     return st.session_state.cached_session
 
@@ -33,7 +37,10 @@ def update_session_cache():
         "session_id":st.session_state.session_id,
         "chats":st.session_state.chats,
         "active_chat_id":st.session_state.active_chat_id,
-        "current_chat_history":st.session_state.current_chat_history
+        "current_chat_history":st.session_state.current_chat_history,
+        "qna":st.session_state.qna,
+        "selected_choices":st.session_state.selected_choices,
+        "input_disabled":st.session_state.input_disabled
     }
     get_cached_session.clear()
     get_cached_session()
@@ -58,6 +65,25 @@ if "active_chat_id" not in st.session_state:
 
 if "current_chat_history" not in st.session_state:
     st.session_state.current_chat_history = cached_session.get("current_chat_history",[])
+
+if "qna" not in st.session_state:
+    st.session_state.qna = cached_session.get("qna",[])
+
+if "selected_choices" not in st.session_state:
+    st.session_state.selected_choices = cached_session.get("selected_choices",{})
+
+if "input_disabled" not in st.session_state:
+    st.session_state.input_disabled = cached_session.get("input_disabled",False)
+
+if "message_to_process" not in st.session_state:
+    st.session_state.message_to_process = cached_session.get("message_to_process",None)
+
+if "score" not in st.session_state:
+    st.session_state.score = 0
+
+if "submitted" not in st.session_state:
+    st.session_state.submitted = False
+
 
 
 def verify_authentication():
@@ -84,7 +110,6 @@ def verify_authentication():
     except requests.exceptions.RequestException as e:
         st.error(f"Server connection error: {e}")
         return st.session_state.authenticated
-
 
 
 if not verify_authentication():
@@ -141,12 +166,14 @@ def create_new_chat():
         }
         st.session_state.active_chat_id = chat_id
         st.session_state.current_chat_history = []
+        st.session_state.input_disabled = False
         update_session_cache()
         st.rerun()
 
 def select_chat(chat_id):
     st.session_state.active_chat_id = chat_id
     insert_component(chat_id)
+    st.session_state.input_disabled = False
     response = requests.get(f"http://127.0.0.1:8000/get_chat_history_for_ui?chat_id={chat_id}")
     if response.status_code == 200:
         response_data = response.json()
@@ -192,10 +219,12 @@ with st.sidebar:
         for chat_id,chat_info in st.session_state.chats.items():
             col1,col2 = st.columns([4,1])
             with col1:
-                if st.button(chat_info['title'],key=chat_id,use_container_width=True):
+                is_active = chat_id == st.session_state.active_chat_id
+                button_style = "primary" if is_active else "secondary"
+                if st.button(chat_info['title'],key=chat_id,use_container_width=True,type=button_style):
                     select_chat(chat_id)
             with col2:
-                if st.button("🗑️",key=f"delete_{chat_id}"):
+                if st.button("🗑",key=f"delete_{chat_id}"):
                     delete_chat(chat_id)
 
 def response_generator(text):
@@ -224,6 +253,9 @@ async def process_message(chat_id,prompt):
         return "Sorry, I encountered an error processing your request"
 
 if st.session_state.active_chat_id and st.session_state.active_chat_id in st.session_state.chats:
+    if not st.session_state.message_to_process:
+        st.session_state.input_disabled = False
+      
     title = st.session_state.chats[st.session_state.active_chat_id]["title"]
     st.title(f"Chat: {title}")
 
@@ -233,28 +265,46 @@ if st.session_state.active_chat_id and st.session_state.active_chat_id in st.ses
                 st.chat_message("user").markdown(chat_info["content"])
             elif chat_info["role"] == "ai":
                 st.chat_message("assistant").markdown(chat_info["content"])
-            
-
-    if prompt := st.chat_input("Type your message..."):
+    
+    if st.session_state.message_to_process:
+        prompt = st.session_state.message_to_process
         st.chat_message("user").markdown(prompt)
-        st.session_state.current_chat_history.append({
-            "role":"human",
-            "content":prompt
-        })
-        update_session_cache()
+        st.session_state.message_to_process = None
+        input_placeholder = st.empty()
         with st.spinner("Thinking..."):
             response_text = asyncio.run(process_message(st.session_state.active_chat_id,prompt))
-        ######### work on rag here
-        st.chat_message("assistant").write_stream(response_generator(response_text))
         st.session_state.current_chat_history.append({
             "role":"ai",
             "content":response_text
         })
+        st.session_state.input_disabled = False
+
         update_session_cache()
+        st.chat_message("assistant").write_stream(response_generator(response_text))
+        st.rerun()
+            
+    input_container = st.container()
+    with input_container:
+        if not st.session_state.input_disabled:
+            if prompt := st.chat_input("Type your message...",disabled=st.session_state.input_disabled):
+                st.session_state.current_chat_history.append({
+                    "role":"human",
+                    "content":prompt
+                })
+                st.session_state.input_disabled = True
+                st.session_state.message_to_process = prompt
+                update_session_cache()
+                st.rerun()
+        
+        else:
+            st.markdown("""
+            <div style="background-color:#f0f2f6; border-radius:8px; padding:10px; margin-top:10px;">
+                <span style="color:#7e7e7e;">Processing message... please wait</span>
+            </div>
+            """, unsafe_allow_html=True)
+
 else:
     st.info("Create a new chat to get started!")
-
-
 
 
 

@@ -91,17 +91,6 @@ if verify_session():
     st.switch_page("pages/dashboard.py")
 
 
-# if st.session_state.authenticated == True:
-#     session_id = st.session_state.session_id
-#     cookie = {"session_id":session_id}
-#     response = requests.get("http://127.0.0.1:8000/validate_session",cookies=cookie)
-#     if response.status_code == 200:
-#         body = response.json()
-#         if body.get("authenticated",True):
-#             st.session_state.authenticated = True
-#             st.session_state.username = body.get("username")
-#             st.switch_page("pages/dashboard.py")
-
 with st.container (border= True):
     st.subheader("Signup")
     username = st.text_input("Enter username")

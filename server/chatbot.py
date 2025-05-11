@@ -15,6 +15,7 @@ from dotenv import load_dotenv
 from pypdf import PdfReader
 from pymongo import MongoClient
 from langchain_community.vectorstores import FAISS
+from langchain_ollama import OllamaLLM
 
 load_dotenv()
 groq_api_key = os.getenv("GROQ_API_KEY")

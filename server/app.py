@@ -1,15 +1,16 @@
-from fastapi import FastAPI,Cookie,Response,Depends
-import streamlit as st
+from fastapi import FastAPI
 from pydantic import BaseModel
-from user_database import find_user,insert_user,check_password
-from cookie_auth import create_session,validate_session,end_session
 from pdfname_db import insert_pdf_name,find_pdf_name,delete_pdf_name
 from chatbot import vectorstore_init_faiss,delete_vectorstore_faiss,create_ragchain
 from chathistory_adapter import get_chat_history_for_ui,insert_chat_history,delete_chat_history,delete_complete_chat_history
 from chat_mangement import insert_chat,find_chat,get_chats,delete_chat,delete_chat_list
-app = FastAPI()
+from qna_generator import generate_qna
+from test_score_db import insert_test_score,get_test_score_list
+from user_database import find_user,insert_user,check_password
+from session_db import create_session,validate_session,end_session
 from fastapi.responses import JSONResponse
-import time
+from fastapi import Cookie
+app = FastAPI()
 
 class UserRequest(BaseModel):
     username:str
@@ -23,8 +24,6 @@ class ProcessMessageRequest(BaseModel):
     chat_id:str
     content:str
     username:str
-
-
 
 @app.post('/login')
 async def login(request:UserRequest):
@@ -97,7 +96,6 @@ async def logout(session_id:str = Cookie(None)):
     response = JSONResponse(content={"result":True,"message":"Logged out successfully!"})
     response.delete_cookie(key="session_id")
     return response
-
 
 
 @app.post("/initialize_vectorstore")
@@ -180,9 +178,16 @@ async def process_manage(request:ProcessMessageRequest):
     return {"response":response["answer"]}
 
 @app.get("/generate_qna")
-async def generate_qna():
-    pass
+async def generate_qna_with_username(username):
+    return await generate_qna(username)
 
+@app.post("/insert_test_score")
+async def insert_test_score_by_username(username,score):
+    return await insert_test_score(username,score)
+
+@app.get("/get_test_score_list")
+async def get_test_score_list_by_username(username):
+    return await get_test_score_list(username)
 
 
 if __name__ == "__main__":

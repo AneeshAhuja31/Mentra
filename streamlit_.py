@@ -2,6 +2,7 @@ import streamlit as st
 import requests
 st.set_page_config(page_title="Mentra",page_icon="😈",layout="centered")
 
+
 hide_sidebar_style = """
     <style>
         [data-testid="stSidebarCollapsedControl"] {

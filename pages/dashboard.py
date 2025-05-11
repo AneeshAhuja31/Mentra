@@ -1,5 +1,6 @@
 import streamlit as st
 import requests
+import pandas as pd
 from pypdf import PdfReader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 hide_sidebar_style = """
@@ -26,7 +27,12 @@ def get_cached_session():
             "session_id":None,
             "chats":{},
             "active_chat_id":None,
-            "current_chat_history":[]
+            "current_chat_history":[],
+            "qna": [],
+            "selected_choices": {},
+            "no_of_q_attempted":0,
+            "test_score_list":[],
+            "avg_score":0
         }
     return st.session_state.cached_session
 
@@ -37,7 +43,12 @@ def update_session_cache():
         "session_id":st.session_state.session_id,
         "chats":st.session_state.get("chats",{}),
         "active_chat_id":st.session_state.get("active_chat_id",None),
-        "current_chat_history":st.session_state.get("current_chat_history",[])
+        "current_chat_history":st.session_state.get("current_chat_history",[]),
+        "qna":st.session_state.get("qna",[]),
+        "selected_choices": st.session_state.get("selected_choices", {}),
+        "no_of_q_attempted": st.session_state.get("no_of_q_attempted", 0),
+        "test_score_list": st.session_state.get("test_score_list", []),
+        "avg_score": st.session_state.get("avg_score", 0)
     }
     get_cached_session.clear()
     get_cached_session()
@@ -83,25 +94,30 @@ if "active_chat_id" not in st.session_state:
 if "current_chat_history" not in st.session_state:
     st.session_state.current_chat_history = cached_session.get("current_chat_history",[])
 
+if "qna" not in st.session_state:
+    st.session_state.qna = cached_session.get("qna",[])
+
+if "selected_choices" not in st.session_state:
+    st.session_state.selected_choices = cached_session.get("selected_choices",{})
+
+if "score" not in st.session_state:
+    st.session_state.score = 0
+
+if "submitted" not in st.session_state:
+    st.session_state.submitted = False
+
+if "no_of_q_attempted" not in st.session_state:
+    st.session_state.no_of_q_attempted  = cached_session.get("no_of_q_attempted",0)
+
+if "test_score_list" not in st.session_state:
+    st.session_state.test_score_list = cached_session.get("test_score_list",[])
+
+if "avg_score" not in st.session_state:
+    st.session_state.avg_score = cached_session.get("avg_score",0)
+
 if not verify_authentication():
     st.switch_page("pages/login_.py")
-# if not st.session_state.authenticated:
-#     session_id = st.session_state.get("session_id",None)
-#     if session_id:
-#         cookie = {"session_id":session_id}
-#         response = requests.get("http://127.0.0.1:8000/validate_session",cookies=cookie)
-#         if response.status_code == 200:
-#             data = response.json()
-#             if data['authenticated']:
-#                 st.session_state.authenticated = True
-#                 st.session_state.username = data["username"]
-#                 update_session_cache()
-#             else:
-#                 st.switch_page("pages/login_.py")
-#         else:
-#             st.switch_page("pages/login_.py")
-#     else:
-#         st.switch_page("pages/login_.py")
+
 
 def get_pdf_and_split_text(file):
     pdf_reader = PdfReader(file)
@@ -115,12 +131,7 @@ def get_pdf_and_split_text(file):
 st.title("Dashboard")
 st.write(f"Welcome, {st.session_state.username}!")
 
-
-# pdf_check_request = {
-#     "username":st.session_state.username
-# }
 pdf_check_response = requests.get(f"http://127.0.0.1:8000/find_pdf_name?username={st.session_state.username}")
-print(f"ok ok ok---------{pdf_check_response.text}")
 pdf_check_json = pdf_check_response.json()
 if not pdf_check_json["bool"]:
     st.write("Let us start by uploading your resume!!")
@@ -206,5 +217,6 @@ if st.button("Logout"):
         st.session_state.username = None
         st.session_state.session_id = None
         update_session_cache()
+        st.cache_resource.clear()
         st.switch_page('streamlit_.py')
 
