@@ -3,17 +3,36 @@ import time
 import requests
 import streamlit.components.v1 as components
 import pandas as pd
-hide_sidebar_style = """
+
+st.set_page_config(page_title="QnA",page_icon="〽️",layout="centered")
+
+
+hide_default_navigation = """
     <style>
-        [data-testid="stSidebar"] {
+    
+        [data-testid="stSidebarNav"] {
             display: none;
         }
-        [data-testid="collapsedControl"] {
-            display: none;
+        section[data-testid="stSidebar"] div.stButton > button {
+            display: block !important;
+            margin-left: auto !important;
+            margin-right: auto !important;
+            width: 80%;
+        }
+            
+        [data-testid="stSidebar"] {
+            min-width: 210px !important;
+            max-width: 210px !important;
+            width: 210px !important;
+        }
+            
+        [data-testid="stSidebar"] > div:first-child {
+            padding-left: 1rem;
+            padding-right: 1rem;
         }
     </style>
 """
-st.markdown(hide_sidebar_style, unsafe_allow_html=True)
+st.markdown(hide_default_navigation, unsafe_allow_html=True)
 
 @st.cache_resource
 def get_cached_session():
@@ -22,11 +41,14 @@ def get_cached_session():
             "authenticated":False,
             "username":None,
             "session_id":None,
+            "filename":None,
             "chats":{},
             "active_chat_id":None,
             "current_chat_history":[],
             "qna": [],
             "selected_choices": {},
+            "test_score_list":[],
+            "ats":{},
         }
     return st.session_state.cached_session
 
@@ -35,11 +57,14 @@ def update_session_cache():
         "authenticated":st.session_state.authenticated,
         "username":st.session_state.username,
         "session_id":st.session_state.session_id,
+        "filename":st.session_state.filename,
         "chats":st.session_state.chats,
         "active_chat_id":st.session_state.active_chat_id,
         "current_chat_history":st.session_state.current_chat_history,
         "qna":st.session_state.qna,
         "selected_choices":st.session_state.selected_choices,
+        "test_score_list":st.session_state.test_score_list,
+        "ats":st.session_state.ats, 
     }
     get_cached_session.clear()
     get_cached_session()
@@ -56,6 +81,9 @@ if "username" not in st.session_state:
 if "session_id" not in st.session_state:
     st.session_state.session_id = cached_session.get("session_id",None)
 
+if "filename" not in st.session_state:
+    st.session_state.filename = cached_session.get("filename",None)
+
 if "chats" not in st.session_state:
     st.session_state.chats = cached_session.get("chats",{})
 
@@ -71,11 +99,11 @@ if "qna" not in st.session_state:
 if "selected_choices" not in st.session_state:
     st.session_state.selected_choices = cached_session.get("selected_choices",{})
 
-if "score" not in st.session_state:
-    st.session_state.score = 0
+if "test_score_list" not in st.session_state:
+    st.session_state.test_score_list = cached_session.get("test_score_list",[])
 
-if "submitted" not in st.session_state:
-    st.session_state.submitted = False
+if "ats" not in st.session_state:
+    st.session_state.ats = cached_session.get("ats",{})
 
 
 def verify_authentication():
@@ -108,6 +136,23 @@ def verify_authentication():
 if not verify_authentication():
     st.switch_page("pages/login_.py")
 
+def logout():
+    session_id = st.session_state.session_id
+    cookie = {"session_id":session_id}
+    response = requests.get("http://127.0.0.1:8000/logout",cookies=cookie)
+    response_data = response.json()
+    if response_data.get('result'):
+        for key in list(st.session_state.keys()):
+            del st.session_state[key]
+        st.session_state.authenticated = False
+        st.session_state.username = None
+        st.session_state.session_id = None
+        st.session_state.filename = None
+        st.session_state.chats = {}
+        update_session_cache()
+        st.cache_resource.clear()
+        st.switch_page('streamlit_.py')
+
 def generate_qna():
     with st.spinner("Generating MCQ"):
         qna_generation_response = requests.get(f"http://127.0.0.1:8000/generate_qna?username={st.session_state.username}")
@@ -134,13 +179,46 @@ if pdf_name_check_response.status_code == 200:
     if not pdf_name_check_response_data["bool"]:
         st.switch_page("pages/dashboard.py")
 
+#########
+with st.sidebar:
+        st.markdown("""
+            <style>
+            /* Target only buttons in the sidebar */
+            section[data-testid="stSidebar"] div.stButton > button {
+                display: block !important;
+                margin-left: auto !important;
+                margin-right: auto !important;
+                width: 80%;
+            }
+            </style>
+        """, unsafe_allow_html=True)
+
+        if st.button("〽️entra"):
+            st.switch_page("pages/dashboard.py")
+    
+        st.write(" ")
+
+        if st.button("Start QnA"):
+            st.switch_page("pages/qna.py")
+
+        st.write(" ")
+
+        if st.button("AI Helper"):
+            st.switch_page("pages/ai_helper.py")
+
+        st.write(" ")
+
+        if st.button("Logout"):
+            logout()
+        
+        st.write(" ")
+
 if not st.session_state.qna:
-    st.title("Test History")
+    st.markdown("<h1 style='color: #FFD700;'>Test History</h1>", unsafe_allow_html=True)
     test_score_list_response = requests.get(f"http://127.0.0.1:8000/get_test_score_list?username={st.session_state.username}")
     if test_score_list_response.status_code == 200:
         test_score_list_response_data = test_score_list_response.json()
         st.session_state.test_score_list = test_score_list_response_data['test_score_list']
-        st.session_state.avg_score = test_score_list_response_data['average']
         
         score_range = list(range(0, 11))
         scores = [int(item['score']) for item in st.session_state.test_score_list]
@@ -150,7 +228,7 @@ if not st.session_state.qna:
         
         st.line_chart(df)
         if scores:
-            st.write(f"Average score: {st.session_state.avg_score:.2f}")
+            st.write(f"Average score: {(sum(scores)/len(scores)):.2f}")
             st.write(f"Best score: {max(scores)}")
             st.write(f"Total tests taken: {len(scores)}")
         update_session_cache()
@@ -162,7 +240,7 @@ if not st.session_state.qna:
 else:
     col1, col2 = st.columns([3, 1])
     with col1:
-        st.title("Resume based MCQ")
+        st.markdown("<h1 style='color: #FFD700;'>Resume based test</h1>", unsafe_allow_html=True)
     with col2:
         if st.session_state.submitted:
             st.markdown(f"### Score: {st.session_state.score}/10")
@@ -170,7 +248,7 @@ else:
     if not st.session_state.submitted:
         
         for qna_item in st.session_state.qna:
-            st.subheader(f"Q{qna_item['q_no']}: {qna_item['question']}:")
+            st.markdown(f"<h3 style='color: #FFD700;'>Q{qna_item['q_no']}: {qna_item['question']}:</h3>", unsafe_allow_html=True)
             q_no = qna_item['q_no']
             choices = qna_item['choices']
             idx = None

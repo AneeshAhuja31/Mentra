@@ -1,5 +1,6 @@
 import streamlit as st
 import requests
+st.set_page_config(page_title="Signup",page_icon="〽️",layout="centered")
 
 hide_sidebar_style = """
     <style>
@@ -92,7 +93,7 @@ if verify_session():
 
 
 with st.container (border= True):
-    st.subheader("Signup")
+    st.markdown("<h2 style='color: #FFD700;'>Signup</h2>", unsafe_allow_html=True)
     username = st.text_input("Enter username")
     password = st.text_input("Enter password",type="password")
     reenterpassword = st.text_input("Renter password",type="password")

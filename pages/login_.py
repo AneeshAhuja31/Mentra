@@ -2,6 +2,8 @@ import requests.cookies
 import streamlit as st
 import requests
 from http.cookies import SimpleCookie
+st.set_page_config(page_title="Login",page_icon="〽️",layout="centered")
+
 hide_sidebar_style = """
     <style>
         [data-testid="stSidebar"] {
@@ -16,6 +18,8 @@ hide_sidebar_style = """
     </style>
 """
 st.markdown(hide_sidebar_style, unsafe_allow_html=True)
+
+
 
 @st.cache_resource
 def get_cached_session():
@@ -89,7 +93,7 @@ if verify_session():
     st.switch_page("pages/dashboard.py")
 
 with st.container(border=True):
-    st.subheader("Login")
+    st.markdown("<h2 style='color: #FFD700;'>Login</h2>", unsafe_allow_html=True)
     username = st.text_input("Enter username")
     password = st.text_input("Enter password",type="password")
     if st.button("Login"):

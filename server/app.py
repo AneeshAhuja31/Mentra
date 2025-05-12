@@ -8,6 +8,8 @@ from qna_generator import generate_qna
 from test_score_db import insert_test_score,get_test_score_list
 from user_database import find_user,insert_user,check_password
 from session_db import create_session,validate_session,end_session
+from ats_generator import generate_ats_response
+from ats_score_db import insert_ats,find_ats,delete_ats
 from fastapi.responses import JSONResponse
 from fastapi import Cookie
 app = FastAPI()
@@ -189,6 +191,21 @@ async def insert_test_score_by_username(username,score):
 async def get_test_score_list_by_username(username):
     return await get_test_score_list(username)
 
+@app.get("/generate_ats")
+async def generate_ats_by_username(username):
+    return await generate_ats_response(username)
+
+@app.post("/insert_ats")
+async def insert_ats(username,score,review):
+    return await insert_ats(username,score,review)
+
+@app.get("/find_ats")
+async def find_ats_by_username(username):
+    return await find_ats(username)
+
+@app.delete("/delete_ats")
+async def delete_ats_by_username(username):
+    return await delete_ats(username)
 
 if __name__ == "__main__":
     import uvicorn

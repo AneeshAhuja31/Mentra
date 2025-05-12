@@ -69,10 +69,7 @@ async def return_context_from_faiss_vectorstore(username):
 
 async def generate_qna(username):
     context = await return_context_from_faiss_vectorstore(username)
-    print(qna_prompt)
     chain = qna_prompt|llm|StrOutputParser()
     response = await chain.ainvoke({"context":context})
-    print(qna_prompt)
-    print(context)
     qna_list = await split_response(response)
     return {"qna_list":qna_list}

@@ -4,6 +4,7 @@ import requests
 import streamlit.components.v1 as components
 import uuid
 import asyncio
+st.set_page_config(page_title="AI Mentor",page_icon="〽️",layout="centered")
 
 hide_default_navigation = """
     <style>
@@ -13,7 +14,10 @@ hide_default_navigation = """
     
     </style>
 """
+
+
 st.markdown(hide_default_navigation, unsafe_allow_html=True)
+
 @st.cache_resource
 def get_cached_session():
     if "cached_session" not in st.session_state:
@@ -21,11 +25,14 @@ def get_cached_session():
             "authenticated":False,
             "username":None,
             "session_id":None,
+            "filename":None,
             "chats":{},
             "active_chat_id":None,
             "current_chat_history":[],
             "qna": [],
             "selected_choices": {},
+            "test_score_list":[],
+            "ats":{},
             "input_disabled":False
         }
     return st.session_state.cached_session
@@ -35,11 +42,14 @@ def update_session_cache():
         "authenticated":st.session_state.authenticated,
         "username":st.session_state.username,
         "session_id":st.session_state.session_id,
+        "filename":st.session_state.filename,
         "chats":st.session_state.chats,
         "active_chat_id":st.session_state.active_chat_id,
         "current_chat_history":st.session_state.current_chat_history,
         "qna":st.session_state.qna,
         "selected_choices":st.session_state.selected_choices,
+        "test_score_list":st.session_state.test_score_list,
+        "ats":st.session_state.ats, 
         "input_disabled":st.session_state.input_disabled
     }
     get_cached_session.clear()
@@ -57,6 +67,9 @@ if "username" not in st.session_state:
 if "session_id" not in st.session_state:
     st.session_state.session_id = cached_session.get("session_id",None)
 
+if "filename" not in st.session_state:
+    st.session_state.session_id = cached_session.get("filename",None)
+
 if "chats" not in st.session_state:
     st.session_state.chats = cached_session.get("chats",{})
 
@@ -71,6 +84,12 @@ if "qna" not in st.session_state:
 
 if "selected_choices" not in st.session_state:
     st.session_state.selected_choices = cached_session.get("selected_choices",{})
+
+if "test_score_list" not in st.session_state:
+    st.session_state.test_score_list = cached_session.get("test_score_list",[])
+
+if "ats" not in st.session_state:
+    st.session_state.ats = cached_session.get("ats",{})
 
 if "input_disabled" not in st.session_state:
     st.session_state.input_disabled = cached_session.get("input_disabled",False)
@@ -211,7 +230,10 @@ def delete_chat(chat_id):
         st.rerun()
 
 with st.sidebar:
-    st.title("Chat History")
+    if st.button("〽️entra"):
+            st.switch_page("pages/dashboard.py")
+    st.write(" ")
+    st.markdown("<h1 style='color: #FFD700;'>Your Chats</h1>", unsafe_allow_html=True)
     if st.button("+ New Chat"):
         create_new_chat()
     st.divider()
@@ -257,7 +279,8 @@ if st.session_state.active_chat_id and st.session_state.active_chat_id in st.ses
         st.session_state.input_disabled = False
       
     title = st.session_state.chats[st.session_state.active_chat_id]["title"]
-    st.title(f"Chat: {title}")
+    st.markdown(f"<h1 style='color: #FFD700;'>Chat: {title}</h1>", unsafe_allow_html=True)
+
 
     if st.session_state.current_chat_history:
         for chat_info in st.session_state.current_chat_history:
