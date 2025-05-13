@@ -1,17 +1,18 @@
-from fastapi import FastAPI
+from fastapi import FastAPI,Cookie
 from pydantic import BaseModel
-from pdfname_db import insert_pdf_name,find_pdf_name,delete_pdf_name
+from pdfname_db import insert_pdf_name,find_pdf_name,delete_pdf_name_and_ats
 from chatbot import vectorstore_init_faiss,delete_vectorstore_faiss,create_ragchain
 from chathistory_adapter import get_chat_history_for_ui,insert_chat_history,delete_chat_history,delete_complete_chat_history
-from chat_mangement import insert_chat,find_chat,get_chats,delete_chat,delete_chat_list
+from chat_mangement import insert_chat,find_chat,get_chats,delete_chat,delete_chat_list,bookmark_chat,find_bookmarks,unbookmark_chat
 from qna_generator import generate_qna
 from test_score_db import insert_test_score,get_test_score_list
 from user_database import find_user,insert_user,check_password
 from session_db import create_session,validate_session,end_session
 from ats_generator import generate_ats_response
-from ats_score_db import insert_ats,find_ats,delete_ats
+from ats_score_db import insert_ats,find_ats
+from questions_results import initialize_questions,update_questions,delete_questions,retrieve_questions
 from fastapi.responses import JSONResponse
-from fastapi import Cookie
+from typing import List
 app = FastAPI()
 
 class UserRequest(BaseModel):
@@ -26,6 +27,17 @@ class ProcessMessageRequest(BaseModel):
     chat_id:str
     content:str
     username:str
+
+class InsertATSRequest(BaseModel):
+    username:str
+    ats_score:int
+    ats_review:str
+
+class UpdateQuestionsRequest(BaseModel):
+    username:str
+    wrong_questions:List[str]
+    right_questions:List[str]
+
 
 @app.post('/login')
 async def login(request:UserRequest):
@@ -122,9 +134,9 @@ async def find_pdf_name_with_username(username:str):
     return await find_pdf_name(username)
     
     
-@app.delete("/delete_pdf_name")
+@app.delete("/delete_pdf_name_and_ats")
 async def delete_pdf_name_with_username(username:str):
-    return await delete_pdf_name(username)
+    return await delete_pdf_name_and_ats(username)
 
 
 @app.post("/new_chat")
@@ -163,21 +175,52 @@ async def delete_chat_history_by_username(username):
     return await delete_complete_chat_history(username)
 
 
+# @app.post("/process_message")
+# async def process_manage(request:ProcessMessageRequest):
+#     chat_id = request.chat_id
+#     content = request.content
+#     username = request.username
+#     await insert_chat_history(chat_id,"human",content,username)
+    
+#     rag_chain = await create_ragchain(username)
+#     response = await rag_chain.ainvoke(
+#         {"input":content},
+#         config={"configurable":{"session_id":chat_id}}
+#     )
+#     await insert_chat_history(chat_id,"ai",response["answer"],username)
+    
+#     return {"response":response["answer"]}
+
 @app.post("/process_message")
-async def process_manage(request:ProcessMessageRequest):
+async def process_manage(request: ProcessMessageRequest):
     chat_id = request.chat_id
     content = request.content
     username = request.username
-    await insert_chat_history(chat_id,"human",content,username)
+    await insert_chat_history(chat_id, "human", content, username)
     
-    rag_chain = await create_ragchain(username)
+    test_scores_data = await get_test_score_list(username)
+    
+    scores = [int(item['score']) for item in test_scores_data["test_score_list"]]
+    
+    test_stats = "No test data available."
+    if scores:
+        avg_score = sum(scores) / len(scores)
+        max_score = max(scores) if scores else 0
+        test_stats = f"""Average test score: {avg_score:.2f}/10, Best score: {max_score}/10, Total tests taken: {len(scores)}
+        Score of tests in order: {scores}
+        """
+
+    wrong_questions_list,right_questions_list = await retrieve_questions(username)
+
+    rag_chain = await create_ragchain(username, test_stats,wrong_questions_list,right_questions_list)
+    
     response = await rag_chain.ainvoke(
-        {"input":content},
-        config={"configurable":{"session_id":chat_id}}
+        {"input": content},
+        config={"configurable": {"session_id": chat_id}}
     )
-    await insert_chat_history(chat_id,"ai",response["answer"],username)
     
-    return {"response":response["answer"]}
+    await insert_chat_history(chat_id, "ai", response["answer"], username)
+    return {"response": response["answer"]}
 
 @app.get("/generate_qna")
 async def generate_qna_with_username(username):
@@ -196,16 +239,43 @@ async def generate_ats_by_username(username):
     return await generate_ats_response(username)
 
 @app.post("/insert_ats")
-async def insert_ats(username,score,review):
+async def insert_ats_by_username(request:InsertATSRequest):
+    username = request.username
+    score = request.ats_score
+    review = request.ats_review
     return await insert_ats(username,score,review)
 
 @app.get("/find_ats")
 async def find_ats_by_username(username):
     return await find_ats(username)
 
-@app.delete("/delete_ats")
-async def delete_ats_by_username(username):
-    return await delete_ats(username)
+
+@app.post("/bookmark_chat")
+async def bookmark_chat_by_chat_id(chat_id):
+    return await bookmark_chat(chat_id)
+
+@app.get("/find_bookmarks")
+async def get_bookmarks(username):
+    return await find_bookmarks(username)
+
+@app.post("/unbookmark_chat")
+async def unbookmark_chat_by_chat_id(chat_id):
+    return await unbookmark_chat(chat_id)
+
+@app.post("/init_questions")
+async def init_questions_on_pdf_upload(username):
+    return await initialize_questions(username)
+
+@app.put("/update_questions")
+async def update_questions_after_test(request:UpdateQuestionsRequest):
+    username = request.username
+    wrong_questions = request.wrong_questions
+    right_questions = request.right_questions
+    return await update_questions(username,wrong_questions,right_questions)
+
+@app.delete("/delete_questions")
+async def delete_questions_on_removing_pdf(username):
+    return await delete_questions(username)
 
 if __name__ == "__main__":
     import uvicorn

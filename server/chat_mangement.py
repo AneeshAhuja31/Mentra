@@ -14,7 +14,9 @@ async def insert_chat(chat_id,username,title):
     document = {
         "chat_id":chat_id,
         "username":username,
-        "title": title
+        "title": title,
+        "bookmarked":False,
+        "updated_at":time.strftime("%Y-%m-%d %H:%M:%S")
     }
     result = await chats.insert_one(document)
 
@@ -62,6 +64,40 @@ async def delete_chat_list(username:str):
     if result.deleted_count:
         response = {"message":f"Deleted all chats of {username}"}
     return response
+
+async def bookmark_chat(chat_id):
+    result = await chats.update_one(
+        {"chat_id":chat_id},
+        {"$set":{"bookmarked":True,"updated_at":time.strftime("%Y-%m-%d %H:%M:%S")}}
+    )
+    response = {"updated":False,"message":"Error in bookmarking chat"}
+    if result.modified_count:
+        response = {"updated":True,
+                    "message":"Successfully bookmarked chat!"}
+    return response
+
+async def find_bookmarks(username):
+    result = await chats.find({"username":username,"bookmarked":True}).sort("bookmarked_at",-1).to_list(length=None)
+    response = {"bool":False,"message":"No Chats bookmarked!","bookmarked_chats_list":[]}
+    if len(result):
+        response = {"bool":True,"bookmarked_chats_list":[serialize_document(chat) for chat in result]}
+    return response
+
+async def get_chats(username):
+    result = await chats.find({"username":username}).to_list(length=None)
+    chat_list = [serialize_document(chat) for chat in result]
+    return {"chat_list":chat_list}
+
+async def unbookmark_chat(chat_id):
+    result = await chats.update_one({"chat_id":chat_id},
+                                    {"$set":{"bookmarked":False,"updated_at":time.strftime("%Y-%m-%d %H:%M:%S")}})
+    response = {"updated":False,"message":"Error in unbookmarking chat"}
+    if result.modified_count:
+        response =  {"updated":True,"message":"Successfully unbookmarked chat!"}
+    return response
+    
+    
+
 
 
     

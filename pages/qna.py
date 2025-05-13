@@ -48,6 +48,7 @@ def get_cached_session():
             "qna": [],
             "selected_choices": {},
             "test_score_list":[],
+            #"submitted":False,
             "ats":{},
         }
     return st.session_state.cached_session
@@ -64,6 +65,7 @@ def update_session_cache():
         "qna":st.session_state.qna,
         "selected_choices":st.session_state.selected_choices,
         "test_score_list":st.session_state.test_score_list,
+        #"submitted":st.session_state.submitted,
         "ats":st.session_state.ats, 
     }
     get_cached_session.clear()
@@ -104,6 +106,9 @@ if "test_score_list" not in st.session_state:
 
 if "ats" not in st.session_state:
     st.session_state.ats = cached_session.get("ats",{})
+
+if "submitted" not in st.session_state:
+    st.session_state.submitted = False
 
 
 def verify_authentication():
@@ -164,13 +169,31 @@ def generate_qna():
 def submit_qna():
     st.session_state.submitted = True
     st.session_state.score = 0
+    wrong_questions = []
+    right_questions = []
+
     for qna_item in st.session_state.qna:
         if qna_item['answer'] == st.session_state.selected_choices[qna_item["q_no"]]:
             st.session_state.score += 1
+            right_questions.append(qna_item["question"])
+        else:
+            wrong_questions.append(qna_item["question"])
     
     test_score_insert_response = requests.post(f"http://127.0.0.1:8000/insert_test_score?username={st.session_state.username}&score={st.session_state.score}")
-    test_score_insert_response_data = test_score_insert_response.json()
-    print(test_score_insert_response_data['message'])
+    if test_score_insert_response.status_code == 200:
+        test_score_insert_response_data = test_score_insert_response.json()
+        print(test_score_insert_response_data['message'])
+
+    questions_update_body = {
+        "username":st.session_state.username,
+        "wrong_questions":wrong_questions,
+        "right_questions":right_questions
+    }
+
+    questions_update_response = requests.put("http://127.0.0.1:8000/update_questions",json=questions_update_body)
+    if questions_update_response.status_code == 200:
+        questions_update_response_data = questions_update_response.json()
+        print(questions_update_response_data["message"])
     
 
 pdf_name_check_response = requests.get(f"http://127.0.0.1:8000/find_pdf_name?username={st.session_state.username}")

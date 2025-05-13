@@ -200,7 +200,7 @@ def show():
     )
     if st.button("Remove PDF"):
         
-        pdf_delete_response = requests.delete(f"http://127.0.0.1:8000/delete_pdf_name?username={st.session_state.username}")
+        pdf_delete_response = requests.delete(f"http://127.0.0.1:8000/delete_pdf_name_and_ats?username={st.session_state.username}")
         if pdf_delete_response.status_code == 200:
             vectorstore_delete_response = requests.delete(f"http://127.0.0.1:8000/delete_vectorstore?username={st.session_state.username}")
             vectorstore_delete_response_data = vectorstore_delete_response.json()
@@ -209,12 +209,16 @@ def show():
                 if chat_delete_response.status_code == 200:
                     chat_history_delete_response = requests.delete(f"http://127.0.0.1:8000/delete_complete_chat_history?username={st.session_state.username}")
                     if chat_history_delete_response.status_code == 200:
-                        st.session_state.chats = {}
-                        st.session_state.active_chat_id = None
-                        st.session_state.current_chat_history = []
-                        st.session_state.filename = None
-                        st.session_state.ats = {}
-                        update_session_cache()
+                        questions_delete_response = requests.delete(f"http://127.0.0.1:8000/delete_questions?username={st.session_state.username}")
+                        if questions_delete_response.status_code == 200:
+                            questions_delete_response_data = questions_delete_response.json()
+                            print(questions_delete_response_data["message"])        
+                            st.session_state.chats = {}
+                            st.session_state.active_chat_id = None
+                            st.session_state.current_chat_history = []
+                            st.session_state.filename = None
+                            st.session_state.ats = {}
+                            update_session_cache()
                 
                 
                         if vectorstore_delete_response_data["success"]:
@@ -226,23 +230,22 @@ def show():
     if 'ats' in st.session_state and st.session_state.ats:
         with st.container():
             
-            cols = st.columns([1, 2, 1])
-            with cols[1]:
+            cols = st.columns([5,1,5])
+            with cols[0]:
                 score = st.session_state.ats.get('ats_score', 0)
                 
-                # Determine color based on score range
                 if score >= 80:
-                    color = "#006400"  # Dark Green
+                    color = "#006400"  #Dark Green
                 elif score >= 60:
-                    color = "#4CAF50"  # Green
+                    color = "#4CAF50"  #Green
                 elif score >= 40:
-                    color = "#FFC107"  # Yellow
+                    color = "#FFC107"  #Yellow
                 elif score >= 20:
-                    color = "#F44336"  # Red
+                    color = "#F44336"  #Red
                 else:
-                    color = "#8B0000"  # Dark Red
+                    color = "#8B0000"  #DarkRed
                 
-                # Create circular progress bar with HTML/CSS
+                #progress bar
                 html_code = f"""
                 <div style="display: flex; justify-content: center; margin: 20px 0;">
                     <div style="
@@ -279,24 +282,80 @@ def show():
                 
                 st.markdown(f"<h3 style='text-align: center; color: {color};'>Review</h3>", unsafe_allow_html=True)
                 
-                # Display review in a styled container
+                #review ui
                 review_text = st.session_state.ats.get('ats_review')
                 
                 st.markdown(f"""
-                <div style="
-                    background-color: rgba(45, 45, 45, 0.6);
-                    border-radius: 10px;
-                    padding: 15px;
-                    margin: 10px 0;
-                    border-left: 5px solid {color};
-                    font-size: 16px;
-                    font-style: italic;
-                    line-height: 1.5;
-                ">
-                    \"{review_text}\"
-                </div>
-                """, unsafe_allow_html=True)
+                    <div style="
+                        background-color: rgba(45, 45, 45, 0.6);
+                        border-radius: 10px;
+                        padding: 8px;
+                        margin: 8px 0;
+                        border-left: 5px solid {color};
+                        font-size: 15px;
+                        font-style: italic;
+                        line-height: 1.4;
+                        min-width: 350px;
+                        max-width: 500px;
+                        width: 90%;
+                        transition: transform 0.2s cubic-bezier(.4,2,.6,1), box-shadow 0.2s;
+                        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+                    "
+                    onmouseover="this.style.transform='scale(1.05)';this.style.boxShadow='0 8px 24px rgba(0,0,0,0.18)';"
+                    onmouseout="this.style.transform='scale(1)';this.style.boxShadow='0 2px 8px rgba(0,0,0,0.08)';"
+                    >
+                        "{review_text}"
+                    </div>
+                    """, unsafe_allow_html=True)
+            with cols[2]:
+                bookmarked_chats_response = requests.get(f"http://127.0.0.1:8000/find_bookmarks?username={st.session_state.username}")
+                bookmarked_chats_response_data = bookmarked_chats_response.json()
+                bookmarked_chat_list = bookmarked_chats_response_data["bookmarked_chats_list"]
+                
+                with st.expander(f"{st.session_state.username}'s Bookmarks 🔖",expanded=True):
+                    if bookmarked_chats_response_data["bool"]:
+                        for chat in bookmarked_chat_list:
+                            title = chat.get("title","Untitled Chat")
+                            updated_at = chat["updated_at"]
+                            chat_id = chat["chat_id"]
+                            with st.container():
+                                col1, col2 = st.columns([4, 1])
+                                
+                                # Display bookmark info in the first column
+                                with col1:
+                                    st.markdown(f"""
+                                    <div style="
+                                        background-color: rgba(45, 45, 45, 0.4);
+                                        border-radius: 8px;
+                                        padding: 10px;
+                                        margin: 5px 0;
+                                        border-left: 3px solid #FFD700;
+                                    ">
+                                        <p style="font-weight: bold; margin-bottom: 5px;">{title}</p>
+                                        <p style="font-size: 0.8em; color: #AAAAAA;">Updated at: {updated_at}</p>
+                                    </div>
+                                    """, unsafe_allow_html=True)
+                                
+                                # Add navigation button in the second column
+                                with col2:
+                                    st.markdown("""
+                                        <style>
+                                        /* Adjust button container vertical alignment */
+                                        div.stButton > button {
+                                            margin-top: 13px !important;
+                                        }
+                                        </style>
+                                        """, unsafe_allow_html=True)
+                                    if st.button("Go →", key=f"goto_{chat_id}"):
+                                        # Store the chat_id to session state for navigation
+                                        st.session_state.active_chat_id = chat_id
+                                        update_session_cache()
+                                        st.switch_page("pages/ai_helper.py")
+                    else:
+                        st.info("No bookmarks Found!")
 
+    else:
+        print("No ATS?")
     with st.sidebar:
         st.markdown("""
             <style>
@@ -320,7 +379,7 @@ def show():
 
         st.write(" ")
 
-        if st.button("AI Helper"):
+        if st.button("AI Mentor"):
             st.switch_page("pages/ai_helper.py")
 
         st.write(" ")
@@ -334,8 +393,6 @@ if not st.session_state.filename:
     pdf_check_response = requests.get(f"http://127.0.0.1:8000/find_pdf_name?username={st.session_state.username}")
     pdf_check_json = pdf_check_response.json()
 
-    # if pdf_check_json["bool"]:
-    #     st.session_state.filename = pdf_check_json["filename"]
     if not pdf_check_json["bool"]:
         st.session_state.filename = None
         st.write("Let us start by uploading your resume!!")
@@ -363,8 +420,26 @@ if not st.session_state.filename:
                         init_vectorstore_response_data = init_vectorstore_response.json()
                         print(init_vectorstore_response_data["message"])
                         
-                        ats_generate_response = requests.get(f"http://127.0.0.1:8000/generate_ats?username={st.session_state.username}")
-                        st.session_state.ats = ats_generate_response.json()
+                        if not st.session_state.ats:
+                            ats_generate_response = requests.get(f"http://127.0.0.1:8000/generate_ats?username={st.session_state.username}")
+                            st.session_state.ats = ats_generate_response.json()
+                            insert_ats_body = {
+                                "username":st.session_state.username,
+                                "ats_score":st.session_state.ats["ats_score"],
+                                "ats_review":st.session_state.ats["ats_review"]
+                            }
+                            
+                            ats_insert_response = requests.post(f"http://127.0.0.1:8000/insert_ats",json=insert_ats_body)
+                            if ats_insert_response.status_code == 200:
+                                ats_insert_response_data = ats_insert_response.json()
+                                print(ats_insert_response_data["message"])
+
+                                questions_init_response = requests.post(f"http://127.0.0.1:8000/init_questions?username={st.session_state.username}")
+                                if questions_init_response.status_code == 200:
+                                    questions_init_response_data = questions_init_response.json()
+                                    print(questions_init_response_data["message"])
+                                
+
                         update_session_cache()
                         st.success("PDF uploaded and vector store initialized successfully!")
                         st.rerun()
@@ -395,7 +470,7 @@ if not st.session_state.filename:
 
             st.write(" ")
 
-            if st.button("AI Helper"):
+            if st.button("AI Mentor"):
                 st.toast("Upload file to use application features!",icon="〽️")
 
             st.write(" ")
@@ -404,7 +479,27 @@ if not st.session_state.filename:
                 logout()
     else: 
         st.session_state.filename = pdf_check_json["filename"]
+        if not st.session_state.ats:
+            ats_find_response = requests.get(f"http://127.0.0.1:8000/find_ats?username={st.session_state.username}")
+            if ats_find_response.status_code == 200:
+                ats_find_response_data = ats_find_response.json()
+                if ats_find_response_data["bool"]:
+                    st.session_state.ats = {
+                        "ats_score":ats_find_response_data["ats_score"],
+                        "ats_review":ats_find_response_data["review"]
+                    }
         update_session_cache()
         st.rerun()
-else: 
+else:  #if we have filename but not ats, get ats from db   
+    if not st.session_state.ats:
+        ats_find_response = requests.get(f"http://127.0.0.1:8000/find_ats?username={st.session_state.username}")
+        if ats_find_response.status_code == 200:
+            ats_find_response_data = ats_find_response.json()
+            if ats_find_response_data["bool"]:
+                st.session_state.ats = {
+                    "ats_score":ats_find_response_data["ats_score"],
+                    "ats_review":ats_find_response_data["review"]
+                }
+                update_session_cache()
+                st.rerun()
     show()

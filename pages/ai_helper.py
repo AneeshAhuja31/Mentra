@@ -29,6 +29,7 @@ def get_cached_session():
             "chats":{},
             "active_chat_id":None,
             "current_chat_history":[],
+            #"bookmarked_chats":{},
             "qna": [],
             "selected_choices": {},
             "test_score_list":[],
@@ -46,6 +47,7 @@ def update_session_cache():
         "chats":st.session_state.chats,
         "active_chat_id":st.session_state.active_chat_id,
         "current_chat_history":st.session_state.current_chat_history,
+        # "bookmarked_chats":st.session_state.bookmarked_chats,
         "qna":st.session_state.qna,
         "selected_choices":st.session_state.selected_choices,
         "test_score_list":st.session_state.test_score_list,
@@ -68,7 +70,7 @@ if "session_id" not in st.session_state:
     st.session_state.session_id = cached_session.get("session_id",None)
 
 if "filename" not in st.session_state:
-    st.session_state.session_id = cached_session.get("filename",None)
+    st.session_state.filename = cached_session.get("filename",None)
 
 if "chats" not in st.session_state:
     st.session_state.chats = cached_session.get("chats",{})
@@ -78,6 +80,9 @@ if "active_chat_id" not in st.session_state:
 
 if "current_chat_history" not in st.session_state:
     st.session_state.current_chat_history = cached_session.get("current_chat_history",[])
+
+# if "bookmarked_chats" not in st.session_state.bookmarked_chats:
+#     st.session_state.bookmarked_chats = cached_session.get("bookmarked_chats",{})
 
 if "qna" not in st.session_state:
     st.session_state.qna = cached_session.get("qna",[])
@@ -147,7 +152,8 @@ if chat_list_response.status_code == 200:
     chats_data = chats_list_response_json["chat_list"]
     for chat in chats_data:
         st.session_state.chats[chat["chat_id"]] = {
-            "title":chat["title"]
+            "title":chat["title"],
+            "bookmarked":chat["bookmarked"]
         }
 
     if st.session_state.chats and not st.session_state.active_chat_id:
@@ -170,10 +176,8 @@ def insert_component(chat_id):
     """, height=0)
     
 
-def create_new_chat():
+def create_new_chat(title):
     chat_id = f"{st.session_state.username}_chat_{uuid.uuid4()}"
-    time_ = time.strftime("%Y-%m-%d %H:%M:%S")
-    title = f"{time_}"
     insert_component(chat_id)
     response = requests.post(f"http://127.0.0.1:8000/new_chat?chat_id={chat_id}&username={st.session_state.username}&title={title}")
     if response.status_code == 200:
@@ -229,17 +233,65 @@ def delete_chat(chat_id):
         update_session_cache()
         st.rerun()
 
+def bookmark_chat(chat_id):
+    current_bookmark_status = st.session_state.chats[chat_id].get("bookmarked", False)
+    
+    if not current_bookmark_status:
+        current_bookmark_count = sum(1 for _, chat_info in st.session_state.chats.items() 
+                                   if chat_info.get("bookmarked", False))
+        
+        if current_bookmark_count >= 5:
+            st.toast("Max limit of 5 bookmarks reached!",icon="〽️")
+            return
+        bookmark_response = requests.post(f"http://127.0.0.1:8000/bookmark_chat?chat_id={chat_id}")
+        if bookmark_response.status_code == 200:
+            bookmark_response_data = bookmark_response.json()
+            if bookmark_response_data["updated"]:
+                st.session_state.chats[chat_id]["bookmarked"] = True
+                
+    else:
+        unbookmark_response = requests.post(f"http://127.0.0.1:8000/unbookmark_chat?chat_id={chat_id}")
+        if unbookmark_response.status_code == 200:
+            unbookmark_response_data = unbookmark_response.json()
+            if unbookmark_response_data["updated"]:
+                st.session_state.chats[chat_id]["bookmarked"] = False
+    
+    update_session_cache()
+    st.rerun()
+
 with st.sidebar:
     if st.button("〽️entra"):
             st.switch_page("pages/dashboard.py")
     st.write(" ")
     st.markdown("<h1 style='color: #FFD700;'>Your Chats</h1>", unsafe_allow_html=True)
-    if st.button("+ New Chat"):
-        create_new_chat()
+    if "show_title_input" not in st.session_state:
+        st.session_state.show_title_input = False
+    
+    # Create New Chat button and title input logic
+    if not st.session_state.show_title_input:
+        if st.button("+ New Chat"):
+            st.session_state.show_title_input = True
+            st.rerun()
+    else:
+        # Show temporary input for title
+        with st.container():
+            chat_title = st.text_input("Enter chat title:", key="new_chat_title")
+            col1, col2 = st.columns(2)
+            with col1:
+                if st.button("Create"):
+                    if chat_title:
+                        create_new_chat(chat_title)
+                    else:
+                        create_new_chat("New Chat")
+                    st.session_state.show_title_input = False
+            with col2:
+                if st.button("Cancel"):
+                    st.session_state.show_title_input = False
+                    st.rerun()
     st.divider()
     if st.session_state.chats:
         for chat_id,chat_info in st.session_state.chats.items():
-            col1,col2 = st.columns([4,1])
+            col1,col2,col3 = st.columns([3,1,1])
             with col1:
                 is_active = chat_id == st.session_state.active_chat_id
                 button_style = "primary" if is_active else "secondary"
@@ -248,6 +300,12 @@ with st.sidebar:
             with col2:
                 if st.button("🗑",key=f"delete_{chat_id}"):
                     delete_chat(chat_id)
+            with col3:
+                is_bookmarked = st.session_state.chats[chat_id].get("bookmarked",False) 
+                button_icon = "🔖" if is_bookmarked else "📌"
+                if st.button(button_icon,key=f"bookmark_{chat_id}"):
+                    
+                    bookmark_chat(chat_id)
 
 def response_generator(text):
     paragraphs = text.split("\n")

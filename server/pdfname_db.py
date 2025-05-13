@@ -29,11 +29,11 @@ async def find_pdf_name(username):
 
 
 
-async def delete_pdf_name(username):
+async def delete_pdf_name_and_ats(username):
     result = await pdfname.delete_one({"username":username})
-    response = {"deleted":False,"message":f"No PDF name found!"}
+    response = {"deleted":False,"message":f"No PDF name or ats found!"}
     if result.deleted_count:
-        response = {"deleted":True,"message":f"Deleted file name of user: {username}"}
+        response = {"deleted":True,"message":f"Deleted file name and ats of user: {username}"}
     return response
 
 
