@@ -116,7 +116,7 @@ def verify_authentication():
             return False
         
         cookie = {"session_id": session_id}
-        response = requests.get("http://127.0.0.1:8000/validate_session", cookies=cookie)
+        response = requests.get("https://mentra-wtcc.onrender.com/validate_session", cookies=cookie)
         
         if response.status_code == 200:
             data = response.json()
@@ -142,7 +142,7 @@ if not verify_authentication():
 def logout():
     session_id = st.session_state.session_id
     cookie = {"session_id":session_id}
-    response = requests.get("http://127.0.0.1:8000/logout",cookies=cookie)
+    response = requests.get("https://mentra-wtcc.onrender.com/logout",cookies=cookie)
     response_data = response.json()
     if response_data.get('result'):
         all_keys = list(st.session_state.keys())
@@ -172,7 +172,7 @@ def generate_qna():
     st.session_state.submitted = False
     update_session_cache()
     with st.spinner("Generating MCQ. This may take some time...."):
-        qna_generation_response = requests.get(f"http://127.0.0.1:8000/generate_qna?username={st.session_state.username}")
+        qna_generation_response = requests.get(f"https://mentra-wtcc.onrender.com/generate_qna?username={st.session_state.username}")
         qna_generation_response_data = qna_generation_response.json()
         st.session_state.qna = qna_generation_response_data["qna_list"]
         update_session_cache()
@@ -191,7 +191,7 @@ def submit_qna():
         else:
             wrong_questions.append(qna_item["question"])
     
-    test_score_insert_response = requests.post(f"http://127.0.0.1:8000/insert_test_score?username={st.session_state.username}&score={st.session_state.score}")
+    test_score_insert_response = requests.post(f"https://mentra-wtcc.onrender.com/insert_test_score?username={st.session_state.username}&score={st.session_state.score}")
     if test_score_insert_response.status_code == 200:
         test_score_insert_response_data = test_score_insert_response.json()
         print(test_score_insert_response_data['message'])
@@ -202,13 +202,13 @@ def submit_qna():
         "right_questions":right_questions
     }
 
-    questions_update_response = requests.put("http://127.0.0.1:8000/update_questions",json=questions_update_body)
+    questions_update_response = requests.put("https://mentra-wtcc.onrender.com/update_questions",json=questions_update_body)
     if questions_update_response.status_code == 200:
         questions_update_response_data = questions_update_response.json()
         print(questions_update_response_data["message"])
     
 
-pdf_name_check_response = requests.get(f"http://127.0.0.1:8000/find_pdf_name?username={st.session_state.username}")
+pdf_name_check_response = requests.get(f"https://mentra-wtcc.onrender.com/find_pdf_name?username={st.session_state.username}")
 if pdf_name_check_response.status_code == 200:
     pdf_name_check_response_data = pdf_name_check_response.json()
     if not pdf_name_check_response_data["bool"]:
@@ -249,7 +249,7 @@ with st.sidebar:
 
 if not st.session_state.qna:
     st.markdown("<h1 style='color: #FFD700;'>Test History</h1>", unsafe_allow_html=True)
-    test_score_list_response = requests.get(f"http://127.0.0.1:8000/get_test_score_list?username={st.session_state.username}")
+    test_score_list_response = requests.get(f"https://mentra-wtcc.onrender.com/get_test_score_list?username={st.session_state.username}")
     if test_score_list_response.status_code == 200:
         test_score_list_response_data = test_score_list_response.json()
         st.session_state.test_score_list = test_score_list_response_data['test_score_list']

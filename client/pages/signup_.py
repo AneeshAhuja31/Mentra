@@ -54,7 +54,7 @@ def verify_session():
         
         cookie = {"session_id":session_id}
         try:
-            response = requests.get("http://127.0.0.1:8000/validate_session",cookies=cookie)
+            response = requests.get("https://mentra-wtcc.onrender.com/validate_session",cookies=cookie)
 
             if response.status_code == 200:
                 data = response.json()
@@ -105,7 +105,7 @@ with st.container (border= True):
                 "username":username,
                 "password":password
             }
-            response = requests.post("http://127.0.0.1:8000/signup",json=request)
+            response = requests.post("https://mentra-wtcc.onrender.com/signup",json=request)
             if response.status_code ==200:
                 response_data = response.json()
                 if response_data.get("result"):

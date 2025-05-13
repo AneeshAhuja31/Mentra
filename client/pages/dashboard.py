@@ -73,7 +73,7 @@ def verify_authentication():
         if not session_id:
             return False
         cookie = {"session_id":session_id}
-        response = requests.get("http://127.0.0.1:8000/validate_session",cookies=cookie)
+        response = requests.get("https://mentra-wtcc.onrender.com/validate_session",cookies=cookie)
         if response.status_code == 200:
             data = response.json()
             if data["authenticated"]:
@@ -145,7 +145,7 @@ def get_pdf_and_split_text(file):
 def logout():
     session_id = st.session_state.session_id
     cookie = {"session_id":session_id}
-    response = requests.get("http://127.0.0.1:8000/logout",cookies=cookie)
+    response = requests.get("https://mentra-wtcc.onrender.com/logout",cookies=cookie)
     response_data = response.json()
     if response_data.get('result'):
         for key in list(st.session_state.keys()):
@@ -213,20 +213,20 @@ def show():
             )
         if st.button("Remove PDF"):
         
-            pdf_delete_response = requests.delete(f"http://127.0.0.1:8000/delete_pdf_name_and_ats?username={st.session_state.username}")
+            pdf_delete_response = requests.delete(f"https://mentra-wtcc.onrender.com/delete_pdf_name_and_ats?username={st.session_state.username}")
             if pdf_delete_response.status_code == 200:
-                vectorstore_delete_response = requests.delete(f"http://127.0.0.1:8000/delete_vectorstore?username={st.session_state.username}")
+                vectorstore_delete_response = requests.delete(f"https://mentra-wtcc.onrender.com/delete_vectorstore?username={st.session_state.username}")
                 vectorstore_delete_response_data = vectorstore_delete_response.json()
                 if vectorstore_delete_response.status_code == 200:
-                    chat_delete_response = requests.delete(f"http://127.0.0.1:8000/delete_chat_list?username={st.session_state.username}")
+                    chat_delete_response = requests.delete(f"https://mentra-wtcc.onrender.com/delete_chat_list?username={st.session_state.username}")
                     if chat_delete_response.status_code == 200:
-                        chat_history_delete_response = requests.delete(f"http://127.0.0.1:8000/delete_complete_chat_history?username={st.session_state.username}")
+                        chat_history_delete_response = requests.delete(f"https://mentra-wtcc.onrender.com/delete_complete_chat_history?username={st.session_state.username}")
                         if chat_history_delete_response.status_code == 200:
-                            questions_delete_response = requests.delete(f"http://127.0.0.1:8000/delete_questions?username={st.session_state.username}")
+                            questions_delete_response = requests.delete(f"https://mentra-wtcc.onrender.com/delete_questions?username={st.session_state.username}")
                             if questions_delete_response.status_code == 200:
                                 questions_delete_response_data = questions_delete_response.json()
                                 print(questions_delete_response_data["message"])    
-                                test_score_delete_response = requests.delete(f"http://127.0.0.1:8000/delete_test_scores?username={st.session_state.username}")
+                                test_score_delete_response = requests.delete(f"https://mentra-wtcc.onrender.com/delete_test_scores?username={st.session_state.username}")
                                 if test_score_delete_response.status_code == 200:
                                     test_score_delete_response_data = test_score_delete_response.json()
                                     print(test_score_delete_response_data["message"])
@@ -301,7 +301,7 @@ def show():
                 st.markdown(html_code, unsafe_allow_html=True)
                 
             
-            bookmarked_chats_response = requests.get(f"http://127.0.0.1:8000/find_bookmarks?username={st.session_state.username}")
+            bookmarked_chats_response = requests.get(f"https://mentra-wtcc.onrender.com/find_bookmarks?username={st.session_state.username}")
             bookmarked_chats_response_data = bookmarked_chats_response.json()
             bookmarked_chat_list = bookmarked_chats_response_data["bookmarked_chats_list"]
             
@@ -413,7 +413,7 @@ def show():
         st.write(" ")
 
 if not st.session_state.filename:
-    pdf_check_response = requests.get(f"http://127.0.0.1:8000/find_pdf_name?username={st.session_state.username}")
+    pdf_check_response = requests.get(f"https://mentra-wtcc.onrender.com/find_pdf_name?username={st.session_state.username}")
     pdf_check_json = pdf_check_response.json()
 
     if not pdf_check_json["bool"]:
@@ -426,7 +426,7 @@ if not st.session_state.filename:
             data = {"username":st.session_state.username}
             with st.spinner("Uploading and initializing vector store..."):
                 
-                response = requests.post(f"http://127.0.0.1:8000/upload_pdf_name?username={st.session_state.username}&pdf_name={file.name}")
+                response = requests.post(f"https://mentra-wtcc.onrender.com/upload_pdf_name?username={st.session_state.username}&pdf_name={file.name}")
                 response_data = response.json()
 
                 if response.status_code ==200:
@@ -438,13 +438,13 @@ if not st.session_state.filename:
                         "username":st.session_state.username,
                         "splitted_text":splitted_text
                     }
-                    init_vectorstore_response = requests.post(f"http://127.0.0.1:8000/initialize_vectorstore",json=vector_init_request)
+                    init_vectorstore_response = requests.post(f"https://mentra-wtcc.onrender.com/initialize_vectorstore",json=vector_init_request)
                     if init_vectorstore_response.status_code == 200:
                         init_vectorstore_response_data = init_vectorstore_response.json()
                         print(init_vectorstore_response_data["message"])
                         
                         if not st.session_state.ats:
-                            ats_generate_response = requests.get(f"http://127.0.0.1:8000/generate_ats?username={st.session_state.username}")
+                            ats_generate_response = requests.get(f"https://mentra-wtcc.onrender.com/generate_ats?username={st.session_state.username}")
                             st.session_state.ats = ats_generate_response.json()
                             insert_ats_body = {
                                 "username":st.session_state.username,
@@ -452,12 +452,12 @@ if not st.session_state.filename:
                                 "ats_review":st.session_state.ats["ats_review"]
                             }
                             
-                            ats_insert_response = requests.post(f"http://127.0.0.1:8000/insert_ats",json=insert_ats_body)
+                            ats_insert_response = requests.post(f"https://mentra-wtcc.onrender.com/insert_ats",json=insert_ats_body)
                             if ats_insert_response.status_code == 200:
                                 ats_insert_response_data = ats_insert_response.json()
                                 print(ats_insert_response_data["message"])
 
-                                questions_init_response = requests.post(f"http://127.0.0.1:8000/init_questions?username={st.session_state.username}")
+                                questions_init_response = requests.post(f"https://mentra-wtcc.onrender.com/init_questions?username={st.session_state.username}")
                                 if questions_init_response.status_code == 200:
                                     questions_init_response_data = questions_init_response.json()
                                     print(questions_init_response_data["message"])
@@ -503,7 +503,7 @@ if not st.session_state.filename:
     else: 
         st.session_state.filename = pdf_check_json["filename"]
         if not st.session_state.ats:
-            ats_find_response = requests.get(f"http://127.0.0.1:8000/find_ats?username={st.session_state.username}")
+            ats_find_response = requests.get(f"https://mentra-wtcc.onrender.com/find_ats?username={st.session_state.username}")
             if ats_find_response.status_code == 200:
                 ats_find_response_data = ats_find_response.json()
                 if ats_find_response_data["bool"]:
@@ -515,7 +515,7 @@ if not st.session_state.filename:
         st.rerun()
 else:  #if we have filename but not ats, get ats from db   
     if not st.session_state.ats:
-        ats_find_response = requests.get(f"http://127.0.0.1:8000/find_ats?username={st.session_state.username}")
+        ats_find_response = requests.get(f"https://mentra-wtcc.onrender.com/find_ats?username={st.session_state.username}")
         if ats_find_response.status_code == 200:
             ats_find_response_data = ats_find_response.json()
             if ats_find_response_data["bool"]:
