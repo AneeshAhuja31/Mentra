@@ -1,5 +1,4 @@
 import streamlit as st
-import requests
 
 st.set_page_config(page_title="Mentra", page_icon="〽️", layout="centered")
 
@@ -27,8 +26,8 @@ st.markdown(hide_sidebar_style, unsafe_allow_html=True)
 st.markdown("<h1 style='text-align: center; color: #FFD700; font-size: 3.5rem; font-weight: bold;'>〽️entra</h1>", unsafe_allow_html=True)
 st.markdown("""
 <div style="text-align: center; margin-bottom: 30px;">
-    <p>Welcome to Mentra - Your Career Companion!</p>
-    <p>Enhance your resume, get personalized feedback, and receive expert job advice with our smart chatbot.</p>
+    <h2>🚀 Welcome to <span style="color: #FFD700;">Mentra</span> – Your Ultimate Career Companion!</h2>
+    <p style="font-size: 1.1rem; color: #aaa;">Supercharge your career with AI-driven resume enhancement, personalized feedback, and expert job-hunting advice.</p>
 </div>
 """, unsafe_allow_html=True)
 

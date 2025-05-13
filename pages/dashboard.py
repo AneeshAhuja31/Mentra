@@ -162,76 +162,95 @@ st.markdown("<h1 style='color: #FFD700;'>Dashboard</h1>", unsafe_allow_html=True
 st.write(f"Welcome, {st.session_state.username}!")
 
 def show():
-    st.markdown(
-        f"""
-        <div style="
-            border: 1px solid rgba(255, 255, 255, 0.2); 
-            border-radius: 12px; 
-            padding: 20px; 
-            width: 100%; 
-            max-width: 450px;
-            background-color: rgba(45, 45, 45, 0.95);
-            color: #FFFFFF;
-            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
-            margin-bottom: 25px;
-            font-family: sans-serif;
-            display: flex;
-            align-items: center;
-        ">
-            <div style="
-                width: 40px;
-                height: 40px;
-                background-color: #FFD700;
-                border-radius: 50%;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                margin-right: 15px;
-            ">
-                <span style="font-size: 20px;">📄</span>
-            </div>
-            <div style="flex-grow: 1;">
-                <div style="font-size: 14px; color: #AAAAAA; margin-bottom: 5px;">UPLOADED FILE</div>
-                <div style="font-size: 18px; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{st.session_state.filename}</div>
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-    if st.button("Remove PDF"):
+    with st.container(border=True):
+        st.markdown(
+                f"""
+                <div style="
+                    border: 1px solid rgba(255, 255, 255, 0.2); 
+                    border-radius: 12px; 
+                    padding: 20px; 
+                    width: 100%; 
+                    max-width: 650px;
+                    background-color: rgba(45, 45, 45, 0.95);
+                    color: #FFFFFF;
+                    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+                    margin-bottom: 25px;
+                    font-family: sans-serif;
+                    display: flex;
+                    align-items: center;
+                ">
+                    <div style="
+                        width: 40px;
+                        height: 40px;
+                        min-width: 40px;
+                        background-color: #FFD700;
+                        border-radius: 50%;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        margin-right: 15px;
+                    ">
+                        <span style="font-size: 20px;">📄</span>
+                    </div>
+                    <div style="
+                        flex-grow: 1;
+                        overflow: hidden;
+                        width: calc(100% - 55px);
+                    ">
+                        <div style="font-size: 14px; color: #AAAAAA; margin-bottom: 5px;">UPLOADED FILE</div>
+                        <div style="
+                            font-size: 18px; 
+                            font-weight: bold; 
+                            white-space: nowrap; 
+                            overflow: hidden; 
+                            text-overflow: ellipsis;
+                            width: 100%;
+                        ">{st.session_state.filename}</div>
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+        if st.button("Remove PDF"):
         
-        pdf_delete_response = requests.delete(f"http://127.0.0.1:8000/delete_pdf_name_and_ats?username={st.session_state.username}")
-        if pdf_delete_response.status_code == 200:
-            vectorstore_delete_response = requests.delete(f"http://127.0.0.1:8000/delete_vectorstore?username={st.session_state.username}")
-            vectorstore_delete_response_data = vectorstore_delete_response.json()
-            if vectorstore_delete_response.status_code == 200:
-                chat_delete_response = requests.delete(f"http://127.0.0.1:8000/delete_chat_list?username={st.session_state.username}")
-                if chat_delete_response.status_code == 200:
-                    chat_history_delete_response = requests.delete(f"http://127.0.0.1:8000/delete_complete_chat_history?username={st.session_state.username}")
-                    if chat_history_delete_response.status_code == 200:
-                        questions_delete_response = requests.delete(f"http://127.0.0.1:8000/delete_questions?username={st.session_state.username}")
-                        if questions_delete_response.status_code == 200:
-                            questions_delete_response_data = questions_delete_response.json()
-                            print(questions_delete_response_data["message"])        
-                            st.session_state.chats = {}
-                            st.session_state.active_chat_id = None
-                            st.session_state.current_chat_history = []
-                            st.session_state.filename = None
-                            st.session_state.ats = {}
-                            update_session_cache()
-                
-                
-                        if vectorstore_delete_response_data["success"]:
-                            st.success("PDF and vector store deleted successfully")
-                            st.rerun()
-                        else:
-                            st.error("Failed to delete PDF or vector store")
-
+            pdf_delete_response = requests.delete(f"http://127.0.0.1:8000/delete_pdf_name_and_ats?username={st.session_state.username}")
+            if pdf_delete_response.status_code == 200:
+                vectorstore_delete_response = requests.delete(f"http://127.0.0.1:8000/delete_vectorstore?username={st.session_state.username}")
+                vectorstore_delete_response_data = vectorstore_delete_response.json()
+                if vectorstore_delete_response.status_code == 200:
+                    chat_delete_response = requests.delete(f"http://127.0.0.1:8000/delete_chat_list?username={st.session_state.username}")
+                    if chat_delete_response.status_code == 200:
+                        chat_history_delete_response = requests.delete(f"http://127.0.0.1:8000/delete_complete_chat_history?username={st.session_state.username}")
+                        if chat_history_delete_response.status_code == 200:
+                            questions_delete_response = requests.delete(f"http://127.0.0.1:8000/delete_questions?username={st.session_state.username}")
+                            if questions_delete_response.status_code == 200:
+                                questions_delete_response_data = questions_delete_response.json()
+                                print(questions_delete_response_data["message"])    
+                                test_score_delete_response = requests.delete(f"http://127.0.0.1:8000/delete_test_scores?username={st.session_state.username}")
+                                if test_score_delete_response.status_code == 200:
+                                    test_score_delete_response_data = test_score_delete_response.json()
+                                    print(test_score_delete_response_data["message"])
+                                
+                                st.session_state.chats = {}
+                                st.session_state.active_chat_id = None
+                                st.session_state.current_chat_history = []
+                                st.session_state.filename = None
+                                st.session_state.ats = {}
+                                update_session_cache()
+                    
+                    
+                            if vectorstore_delete_response_data["success"]:
+                                st.success("PDF and vector store deleted successfully")
+                                st.rerun()
+                            else:
+                                st.error("Failed to delete PDF or vector store")
+    
     if 'ats' in st.session_state and st.session_state.ats:
-        with st.container():
-            
-            cols = st.columns([5,1,5])
-            with cols[0]:
+        
+        cols = st.columns([1,1.5])
+        with cols[0]:
+            with st.container(border=True):
+
                 score = st.session_state.ats.get('ats_score', 0)
                 
                 if score >= 80:
@@ -244,7 +263,8 @@ def show():
                     color = "#F44336"  #Red
                 else:
                     color = "#8B0000"  #DarkRed
-                
+
+                st.markdown(f"<h3 style='text-align: center; color: {color};'>Resume Score</h3>", unsafe_allow_html=True)
                 #progress bar
                 html_code = f"""
                 <div style="display: flex; justify-content: center; margin: 20px 0;">
@@ -280,9 +300,56 @@ def show():
                 """
                 st.markdown(html_code, unsafe_allow_html=True)
                 
+            
+            bookmarked_chats_response = requests.get(f"http://127.0.0.1:8000/find_bookmarks?username={st.session_state.username}")
+            bookmarked_chats_response_data = bookmarked_chats_response.json()
+            bookmarked_chat_list = bookmarked_chats_response_data["bookmarked_chats_list"]
+            
+            with st.expander(f"{st.session_state.username}'s Bookmarks 🔖",expanded=True):
+                if bookmarked_chats_response_data["bool"]:
+                    for chat in bookmarked_chat_list:
+                        title = chat.get("title","Untitled Chat")
+                        updated_at = chat["updated_at"]
+                        chat_id = chat["chat_id"]
+
+
+                        with st.container():
+                            col1, col2 = st.columns([4, 1])
+                            
+                            with col1:
+                                st.markdown(f"""
+                                <div style="
+                                    background-color: rgba(45, 45, 45, 0.4);
+                                    border-radius: 8px;
+                                    padding: 10px;
+                                    margin: 5px 0;
+                                    border-left: 3px solid #FFD700;
+                                ">
+                                    <p style="font-weight: bold; margin-bottom: 5px;">{title}</p>
+                                    <p style="font-size: 0.8em; color: #AAAAAA;">Updated at: {updated_at}</p>
+                                </div>
+                                """, unsafe_allow_html=True)
+                            
+                            with col2:
+                                st.markdown("""
+                                <style>
+                                /* Adjust button container vertical alignment */
+                                div.stButton > button {
+                                    margin-top: 13px !important;
+                                }
+                                </style>
+                                """, unsafe_allow_html=True)
+                                if st.button("→", key=f"goto_{chat_id}"):
+                                    st.session_state.active_chat_id = chat_id
+                                    update_session_cache()
+                                    st.switch_page("pages/ai_helper.py")
+                else:
+                    st.info("No bookmarks Found!")
+            
+        with cols[1]:
+            with st.container(border=True):
                 st.markdown(f"<h3 style='text-align: center; color: {color};'>Review</h3>", unsafe_allow_html=True)
                 
-                #review ui
                 review_text = st.session_state.ats.get('ats_review')
                 
                 st.markdown(f"""
@@ -307,52 +374,8 @@ def show():
                         "{review_text}"
                     </div>
                     """, unsafe_allow_html=True)
-            with cols[2]:
-                bookmarked_chats_response = requests.get(f"http://127.0.0.1:8000/find_bookmarks?username={st.session_state.username}")
-                bookmarked_chats_response_data = bookmarked_chats_response.json()
-                bookmarked_chat_list = bookmarked_chats_response_data["bookmarked_chats_list"]
-                
-                with st.expander(f"{st.session_state.username}'s Bookmarks 🔖",expanded=True):
-                    if bookmarked_chats_response_data["bool"]:
-                        for chat in bookmarked_chat_list:
-                            title = chat.get("title","Untitled Chat")
-                            updated_at = chat["updated_at"]
-                            chat_id = chat["chat_id"]
-                            with st.container():
-                                col1, col2 = st.columns([4, 1])
-                                
-                                # Display bookmark info in the first column
-                                with col1:
-                                    st.markdown(f"""
-                                    <div style="
-                                        background-color: rgba(45, 45, 45, 0.4);
-                                        border-radius: 8px;
-                                        padding: 10px;
-                                        margin: 5px 0;
-                                        border-left: 3px solid #FFD700;
-                                    ">
-                                        <p style="font-weight: bold; margin-bottom: 5px;">{title}</p>
-                                        <p style="font-size: 0.8em; color: #AAAAAA;">Updated at: {updated_at}</p>
-                                    </div>
-                                    """, unsafe_allow_html=True)
-                                
-                                # Add navigation button in the second column
-                                with col2:
-                                    st.markdown("""
-                                        <style>
-                                        /* Adjust button container vertical alignment */
-                                        div.stButton > button {
-                                            margin-top: 13px !important;
-                                        }
-                                        </style>
-                                        """, unsafe_allow_html=True)
-                                    if st.button("Go →", key=f"goto_{chat_id}"):
-                                        # Store the chat_id to session state for navigation
-                                        st.session_state.active_chat_id = chat_id
-                                        update_session_cache()
-                                        st.switch_page("pages/ai_helper.py")
-                    else:
-                        st.info("No bookmarks Found!")
+                    
+                    
 
     else:
         print("No ATS?")
@@ -374,17 +397,17 @@ def show():
     
         st.write(" ")
 
-        if st.button("Start QnA"):
+        if st.button("📄Start QnA"):
             st.switch_page("pages/qna.py")
 
         st.write(" ")
 
-        if st.button("AI Mentor"):
+        if st.button("🤖AI Mentor"):
             st.switch_page("pages/ai_helper.py")
 
         st.write(" ")
 
-        if st.button("Logout"):
+        if st.button("⏻Logout"):
             logout()
         
         st.write(" ")
@@ -465,17 +488,17 @@ if not st.session_state.filename:
 
             st.write(" ")
 
-            if st.button("Start QnA"):
+            if st.button("📄Start QnA"):
                 st.toast("Upload file to use application features!",icon="〽️")
 
             st.write(" ")
 
-            if st.button("AI Mentor"):
+            if st.button("🤖AI Mentor"):
                 st.toast("Upload file to use application features!",icon="〽️")
 
             st.write(" ")
 
-            if st.button("Logout"):
+            if st.button("⏻Logout"):
                 logout()
     else: 
         st.session_state.filename = pdf_check_json["filename"]

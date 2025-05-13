@@ -5,7 +5,7 @@ from chatbot import vectorstore_init_faiss,delete_vectorstore_faiss,create_ragch
 from chathistory_adapter import get_chat_history_for_ui,insert_chat_history,delete_chat_history,delete_complete_chat_history
 from chat_mangement import insert_chat,find_chat,get_chats,delete_chat,delete_chat_list,bookmark_chat,find_bookmarks,unbookmark_chat
 from qna_generator import generate_qna
-from test_score_db import insert_test_score,get_test_score_list
+from test_score_db import insert_test_score, get_test_score_list, delete_test_scores  
 from user_database import find_user,insert_user,check_password
 from session_db import create_session,validate_session,end_session
 from ats_generator import generate_ats_response
@@ -175,22 +175,6 @@ async def delete_chat_history_by_username(username):
     return await delete_complete_chat_history(username)
 
 
-# @app.post("/process_message")
-# async def process_manage(request:ProcessMessageRequest):
-#     chat_id = request.chat_id
-#     content = request.content
-#     username = request.username
-#     await insert_chat_history(chat_id,"human",content,username)
-    
-#     rag_chain = await create_ragchain(username)
-#     response = await rag_chain.ainvoke(
-#         {"input":content},
-#         config={"configurable":{"session_id":chat_id}}
-#     )
-#     await insert_chat_history(chat_id,"ai",response["answer"],username)
-    
-#     return {"response":response["answer"]}
-
 @app.post("/process_message")
 async def process_manage(request: ProcessMessageRequest):
     chat_id = request.chat_id
@@ -233,6 +217,10 @@ async def insert_test_score_by_username(username,score):
 @app.get("/get_test_score_list")
 async def get_test_score_list_by_username(username):
     return await get_test_score_list(username)
+
+@app.delete("/delete_test_scores")
+async def delete_test_scores_endpoint(username: str):
+    return await delete_test_scores(username)
 
 @app.get("/generate_ats")
 async def generate_ats_by_username(username):

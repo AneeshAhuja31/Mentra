@@ -29,7 +29,6 @@ def get_cached_session():
             "chats":{},
             "active_chat_id":None,
             "current_chat_history":[],
-            #"bookmarked_chats":{},
             "qna": [],
             "selected_choices": {},
             "test_score_list":[],
@@ -47,7 +46,6 @@ def update_session_cache():
         "chats":st.session_state.chats,
         "active_chat_id":st.session_state.active_chat_id,
         "current_chat_history":st.session_state.current_chat_history,
-        # "bookmarked_chats":st.session_state.bookmarked_chats,
         "qna":st.session_state.qna,
         "selected_choices":st.session_state.selected_choices,
         "test_score_list":st.session_state.test_score_list,
@@ -80,9 +78,6 @@ if "active_chat_id" not in st.session_state:
 
 if "current_chat_history" not in st.session_state:
     st.session_state.current_chat_history = cached_session.get("current_chat_history",[])
-
-# if "bookmarked_chats" not in st.session_state.bookmarked_chats:
-#     st.session_state.bookmarked_chats = cached_session.get("bookmarked_chats",{})
 
 if "qna" not in st.session_state:
     st.session_state.qna = cached_session.get("qna",[])
@@ -267,13 +262,11 @@ with st.sidebar:
     if "show_title_input" not in st.session_state:
         st.session_state.show_title_input = False
     
-    # Create New Chat button and title input logic
     if not st.session_state.show_title_input:
         if st.button("+ New Chat"):
             st.session_state.show_title_input = True
             st.rerun()
     else:
-        # Show temporary input for title
         with st.container():
             chat_title = st.text_input("Enter chat title:", key="new_chat_title")
             col1, col2 = st.columns(2)

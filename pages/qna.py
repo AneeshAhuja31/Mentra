@@ -48,7 +48,6 @@ def get_cached_session():
             "qna": [],
             "selected_choices": {},
             "test_score_list":[],
-            #"submitted":False,
             "ats":{},
         }
     return st.session_state.cached_session
@@ -65,7 +64,6 @@ def update_session_cache():
         "qna":st.session_state.qna,
         "selected_choices":st.session_state.selected_choices,
         "test_score_list":st.session_state.test_score_list,
-        #"submitted":st.session_state.submitted,
         "ats":st.session_state.ats, 
     }
     get_cached_session.clear()
@@ -147,19 +145,33 @@ def logout():
     response = requests.get("http://127.0.0.1:8000/logout",cookies=cookie)
     response_data = response.json()
     if response_data.get('result'):
-        for key in list(st.session_state.keys()):
+        all_keys = list(st.session_state.keys())
+        for key in all_keys:
             del st.session_state[key]
+            
         st.session_state.authenticated = False
         st.session_state.username = None
         st.session_state.session_id = None
         st.session_state.filename = None
         st.session_state.chats = {}
+        st.session_state.active_chat_id = None  
+        st.session_state.current_chat_history = []
+        st.session_state.qna = []
+        st.session_state.selected_choices = {}
+        st.session_state.test_score_list = []
+        st.session_state.submitted = False
+        st.session_state.ats = {}
+        
         update_session_cache()
         st.cache_resource.clear()
         st.switch_page('streamlit_.py')
 
 def generate_qna():
-    with st.spinner("Generating MCQ"):
+    st.session_state.qna = []
+    st.session_state.selected_choices = {}
+    st.session_state.submitted = False
+    update_session_cache()
+    with st.spinner("Generating MCQ. This may take some time...."):
         qna_generation_response = requests.get(f"http://127.0.0.1:8000/generate_qna?username={st.session_state.username}")
         qna_generation_response_data = qna_generation_response.json()
         st.session_state.qna = qna_generation_response_data["qna_list"]
@@ -202,7 +214,6 @@ if pdf_name_check_response.status_code == 200:
     if not pdf_name_check_response_data["bool"]:
         st.switch_page("pages/dashboard.py")
 
-#########
 with st.sidebar:
         st.markdown("""
             <style>
@@ -221,17 +232,17 @@ with st.sidebar:
     
         st.write(" ")
 
-        if st.button("Start QnA"):
+        if st.button("📄Start QnA"):
             st.switch_page("pages/qna.py")
 
         st.write(" ")
 
-        if st.button("AI Helper"):
+        if st.button("🤖AI Helper"):
             st.switch_page("pages/ai_helper.py")
 
         st.write(" ")
 
-        if st.button("Logout"):
+        if st.button("⏻Logout"):
             logout()
         
         st.write(" ")
@@ -249,12 +260,51 @@ if not st.session_state.qna:
         df = pd.DataFrame({'Score': score_range, 'Frequency': frequency})
         df.set_index('Score', inplace=True)
         
-        st.line_chart(df)
+        st.markdown("### Score Distribution")
+        chart_container = st.container(border=True)
+        with chart_container:
+            st.line_chart(
+                df, 
+                color="#FFD700", 
+                use_container_width=True
+            )
+        
         if scores:
-            st.write(f"Average score: {(sum(scores)/len(scores)):.2f}")
-            st.write(f"Best score: {max(scores)}")
-            st.write(f"Total tests taken: {len(scores)}")
+            stats_container = st.container(border=True)
+            with stats_container:
+                st.markdown("### Performance Metrics")
+                
+                col1, col2, col3 = st.columns(3)
+                
+                with col1:
+                    st.metric(
+                        label="Average Score", 
+                        value=f"{(sum(scores)/len(scores)):.1f}/10",
+                        help="Your average performance across all tests"
+                    )
+                    
+                with col2:
+                    st.metric(
+                        label="Best Score", 
+                        value=f"{max(scores)}/10",
+                        delta=f"+{max(scores) - (sum(scores)/len(scores)):.1f}" if max(scores) > sum(scores)/len(scores) else None,
+                        help="Your highest achieved score"
+                    )
+                    
+                with col3:
+                    st.metric(
+                        label="Tests Completed", 
+                        value=f"{len(scores)}",
+                        help="Total number of quizzes taken"
+                    )
         update_session_cache()
+
+    with st.container():
+        col1, col2 = st.columns([5, 1])
+        with col1:
+            st.markdown("<h3 style='color: #FFD700;'>Ready for a Quiz?</h3>", unsafe_allow_html=True)
+            st.write("Test your knowledge with questions based on your resume")
+        
 
     if st.button("Generate QnA"):
         if not st.session_state.qna:
@@ -305,11 +355,11 @@ else:
                     submit_qna()
                     st.rerun()
                 else:
-                    st.toast("Attempted all questions!",icon="⚠️")
+                    st.toast("Attempt all questions!",icon="⚠️")
 
     else:
         for qna_item in st.session_state.qna:
-            user_choice = st.session_state.selected_choices[qna_item['q_no']]
+            user_choice = st.session_state.selected_choices.get(qna_item['q_no'],"No answer selected!")
             correct = user_choice == qna_item["answer"]
         
             with st.expander(f"Q{qna_item['q_no']}: {qna_item['question']}:",expanded=True):
@@ -326,6 +376,14 @@ else:
         if st.session_state.score == 10:
             st.balloons()
         
+        col1, col2, col3 = st.columns([1, 1, 1])
+        with col2:
+            if st.button("← Back to Test History", use_container_width=True):
+                st.session_state.qna = []
+                st.session_state.selected_choices = {}
+                st.session_state.submitted = False
+                update_session_cache()
+                st.rerun()
        
         st.session_state.qna = []
         st.session_state.selected_choices = {}

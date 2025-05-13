@@ -31,4 +31,11 @@ async def get_test_score_list(username:str):
         )
     return {"test_score_list":test_score_list_response}
 
+async def delete_test_scores(username):
+    result = await test_score.delete_many({"username": username})
+    response = {"success": False, "message": f"No test scores found for {username}"}
+    if result.deleted_count:
+        response = {"success": True, "message": f"Successfully deleted {result.deleted_count} test scores for {username}"}
+    return response
+
 
