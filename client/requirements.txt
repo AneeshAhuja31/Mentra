@@ -1,0 +1,5 @@
+langchain==0.3.25
+pandas==2.2.3
+pypdf==5.5.0
+Requests==2.32.3
+streamlit==1.44.1
