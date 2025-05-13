@@ -1,5 +1,0 @@
-[theme]
-primaryColor = "#FFD700"               # Gold for buttons/interactive elements
-backgroundColor = "#121212"            # Dark background
-secondaryBackgroundColor = "#2D2D2D"   # Lighter dark for sidebar/cards
-textColor = "#FFFFFF"                  # White for regular text
