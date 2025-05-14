@@ -11,6 +11,7 @@ from session_db import create_session,validate_session,end_session
 from ats_generator import generate_ats_response
 from ats_score_db import insert_ats,find_ats
 from questions_results import initialize_questions,update_questions,delete_questions,retrieve_questions
+from cl_generator import generate_cover_letter
 from fastapi.responses import JSONResponse
 from typing import List
 app = FastAPI()
@@ -37,6 +38,12 @@ class UpdateQuestionsRequest(BaseModel):
     username:str
     wrong_questions:List[str]
     right_questions:List[str]
+
+class CoverLetterRequest(BaseModel):
+    username:str
+    job_description:str
+    hiring_manager:str
+    company_name:str
 
 
 @app.post('/login')
@@ -264,6 +271,17 @@ async def update_questions_after_test(request:UpdateQuestionsRequest):
 @app.delete("/delete_questions")
 async def delete_questions_on_removing_pdf(username):
     return await delete_questions(username)
+
+@app.post("/generate_cl")
+async def generate_cl(request:CoverLetterRequest):
+    username = request.username
+    job_description = request.job_description
+    hiring_manager = request.hiring_manager
+    if hiring_manager == "":
+        hiring_manager == "Hiring Manager"
+    company_name = request.company_name
+    text = await generate_cover_letter(username,job_description,hiring_manager,company_name)
+    return {"text":text}
 
 if __name__ == "__main__":
     import uvicorn

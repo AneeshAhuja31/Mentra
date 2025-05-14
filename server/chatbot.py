@@ -7,10 +7,10 @@ from langchain.chains import create_history_aware_retriever,create_retrieval_cha
 from langchain.chains.combine_documents import create_stuff_documents_chain
 from chathistory_class import get_chat_history
 import os
-import shutil
 from dotenv import load_dotenv
 from pymongo import MongoClient
-from langchain_community.vectorstores import FAISS
+#from langchain_mongodb import MongoDBAtlasVectorSearch
+from langchain.vectorstores import MongoDBAtlasVectorSearch
 from langchain_google_genai import ChatGoogleGenerativeAI
 
 load_dotenv()
@@ -24,7 +24,20 @@ client = MongoClient(mongodb_uri)
 db = client.mentra_db
 chat_history_collection = db.chat_history
 
+vectorstore_collection = db.vectorstore_embeddings
 
+# Define the vector search index configuration
+ATLAS_VECTOR_SEARCH_INDEX_CONFIG = {
+    "name": "default",
+    "fields": [
+        {
+            "type": "vector",
+            "path": "embedding",
+            "numDimensions": 384,  # Dimension for all-MiniLM-L6-v2
+            "similarity": "cosine"
+        }
+    ]
+}
 
 
 contextualize_q_prompt = '''
@@ -123,34 +136,46 @@ qa_prompt = ChatPromptTemplate.from_messages(
 
 async def vectorstore_init_faiss(text,username):
     embeddings = HuggingFaceEmbeddings(model_name = "all-MiniLM-L6-v2")
+    
     user_dir = f"./faiss_index/{username}"
     os.makedirs(user_dir, exist_ok=True)
+    vectorstore_collection.delete_many({"username":username})
+    metadatas = [{"username": username} for _ in range(len(text))]
 
-    vectorstore = FAISS.from_texts(
+    vectorstore = MongoDBAtlasVectorSearch.from_texts(
         texts=text,
-        embedding=embeddings
+        embedding=embeddings,
+        collection=vectorstore_collection,
+        metadatas=metadatas,
+        index_name="default"
     )
-    vectorstore.save_local(user_dir)
-    return vectorstore.as_retriever()
+    return vectorstore.as_retriever(
+        search_kwargs = {"filter":{"username":username}}
+    )
 
 async def get_vector_store_retriever_faiss(username):
     embeddings = HuggingFaceEmbeddings(model_name = "all-MiniLM-L6-v2")
-    user_dir = f"./faiss_index/{username}"
 
-    vectorstore = FAISS.load_local(user_dir,embeddings,allow_dangerous_deserialization=True)
-    return vectorstore.as_retriever()
+    vectorstore = MongoDBAtlasVectorSearch(
+        collection=vectorstore_collection,
+        embedding=embeddings,
+        index_name="default"
+    )
+    return vectorstore.as_retriever(
+        search_kwargs = {"filter":{"username":username}}
+    )
 
 async def delete_vectorstore_faiss(username):
-    user_dir = f"./faiss_index/{username}"
-    if not os.path.exists(user_dir):
-        return {"success": False, "message": f"No vectorstore found for {username}"}
     try:
-        shutil.rmtree(user_dir)
-        return {"success":True,"message":f"Vectorstore for {username} deleted successfully"}
+        result = vectorstore_collection.delete_many({"username":username})
+
+        if result.deleted_count > 0:
+            return {"success":True,"message":f"Vectorstore for {username} deleted"}
+        else:
+            return {"success":False,"message":f"No vectorstore found for {username}"}
     except Exception as e:
-        return {"success": False, "message": f"Error deleting vector store: {str(e)}"}
-
-
+        return {"success":False,"message":f"Error deleting vector store: {str(e)}"}
+    
 async def create_conversational_rag_chain(llm, prompt, vectorstore_retriever, qa_prompt, test_stats="No test data available.",wrong_questions_list = [],right_questions_list = []):
     history_aware_chain = create_history_aware_retriever(llm, vectorstore_retriever, prompt)
     

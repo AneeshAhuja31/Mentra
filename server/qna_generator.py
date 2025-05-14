@@ -1,14 +1,20 @@
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from langchain_huggingface import HuggingFaceEmbeddings
-from langchain_community.vectorstores import FAISS
+from langchain_community.vectorstores import MongoDBAtlasVectorSearch
+from langchain_mongodb import MongoDBAtlasVectorSearch
 from langchain_google_genai import ChatGoogleGenerativeAI
+from chatbot import vectorstore_collection
 import os
 from dotenv import load_dotenv
 load_dotenv()
 
 gemini_api_key = os.getenv("GEMINI_API_KEY")
 llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash",google_api_key=gemini_api_key)
+mongodb_uri = os.getenv("MONGODB_URI")
+
+
+
 
 base_prompt = """Based on the resume information, create EXACTLY 10 multiple-choice questions.
 
@@ -59,12 +65,24 @@ async def split_response(response):
     return qna_list
 
 async def return_context_from_faiss_vectorstore(username):
-    embeddings = HuggingFaceEmbeddings(model_name = "all-MiniLM-L6-v2")
-    user_dir = f"./faiss_index/{username}"
+    embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+    
+    # Create MongoDB vectorstore retriever
+    vectorstore = MongoDBAtlasVectorSearch(
+        collection=vectorstore_collection,  # Make sure this is imported or passed
+        embedding=embeddings,
+        index_name="default"
+    )
 
-    vectorstore = FAISS.load_local(user_dir,embeddings,allow_dangerous_deserialization=True)
-    all_docs = list(vectorstore.docstore._dict.values())
-    context = "\n\n".join([doc.page_content for doc in all_docs])
+    # Get all documents for this user
+    print("########################3")
+    documents = vectorstore.similarity_search(
+        query="", 
+        k=100,  
+        pre_filter={"username": {"$eq": username}}
+    )
+    print("&&&&&&&&&&&&&&&&&&&&&&&&&77")
+    context = " ".join([doc.page_content for doc in documents])
     return context
 
 async def generate_qna(username):
