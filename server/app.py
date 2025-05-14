@@ -15,8 +15,19 @@ from cl_generator import generate_cover_letter
 from fastapi.responses import JSONResponse
 from typing import List
 import gc
+from fastapi.middleware.cors import CORSMiddleware
+
 gc.set_threshold(700, 10, 5)
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allows all origins
+    allow_credentials=True,
+    allow_methods=["*"],  # Allows all methods
+    allow_headers=["*"],  # Allows all headers
+)
+
 
 class UserRequest(BaseModel):
     username:str
