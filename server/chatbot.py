@@ -12,7 +12,7 @@ from pymongo import MongoClient
 #from langchain_mongodb import MongoDBAtlasVectorSearch
 from langchain.vectorstores import MongoDBAtlasVectorSearch
 from langchain_google_genai import ChatGoogleGenerativeAI
-
+import gc
 load_dotenv()
 gemini_api_key = os.getenv("GEMINI_API_KEY")
 
@@ -137,8 +137,6 @@ qa_prompt = ChatPromptTemplate.from_messages(
 async def vectorstore_init_faiss(text,username):
     embeddings = HuggingFaceEmbeddings(model_name = "all-MiniLM-L6-v2")
     
-    user_dir = f"./faiss_index/{username}"
-    os.makedirs(user_dir, exist_ok=True)
     vectorstore_collection.delete_many({"username":username})
     metadatas = [{"username": username} for _ in range(len(text))]
 
