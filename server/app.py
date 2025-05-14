@@ -14,6 +14,8 @@ from questions_results import initialize_questions,update_questions,delete_quest
 from cl_generator import generate_cover_letter
 from fastapi.responses import JSONResponse
 from typing import List
+import gc
+gc.set_threshold(700, 10, 5)
 app = FastAPI()
 
 class UserRequest(BaseModel):
@@ -45,6 +47,9 @@ class CoverLetterRequest(BaseModel):
     hiring_manager:str
     company_name:str
 
+@app.get("/health")
+async def health_check():
+    return {"status": "healthy"}
 
 @app.post('/login')
 async def login(request:UserRequest):
@@ -285,5 +290,15 @@ async def generate_cl(request:CoverLetterRequest):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app,host="0.0.0.0",port=8000)
+    import os
+    import logging
+
+    logging.basicConfig(level=logging.INFO)
+    logger = logging.getLogger("app")
+    
+    port = int(os.environ.get("PORT", 8000))
+    
+    logger.info(f"Starting application on port {port}")
+    
+    uvicorn.run(app, host="0.0.0.0", port=port, log_level="info")
     
