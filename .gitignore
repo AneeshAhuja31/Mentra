@@ -1,3 +1,4 @@
 client_/
 **/.env
 my-ollama-hf-space/
+local_client/
