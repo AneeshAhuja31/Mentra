@@ -134,22 +134,62 @@ qa_prompt = ChatPromptTemplate.from_messages(
 )
   
 
-async def vectorstore_init_faiss(text,username):
-    embeddings = HuggingFaceEmbeddings(model_name = "all-MiniLM-L6-v2")
+# async def vectorstore_init_faiss(text,username):
+#     embeddings = HuggingFaceEmbeddings(model_name = "all-MiniLM-L6-v2")
     
-    vectorstore_collection.delete_many({"username":username})
-    metadatas = [{"username": username} for _ in range(len(text))]
+#     vectorstore_collection.delete_many({"username":username})
+#     metadatas = [{"username": username} for _ in range(len(text))]
 
-    vectorstore = MongoDBAtlasVectorSearch.from_texts(
-        texts=text,
-        embedding=embeddings,
-        collection=vectorstore_collection,
-        metadatas=metadatas,
-        index_name="default"
-    )
-    return vectorstore.as_retriever(
-        search_kwargs = {"filter":{"username":username}}
-    )
+#     vectorstore = MongoDBAtlasVectorSearch.from_texts(
+#         texts=text,
+#         embedding=embeddings,
+#         collection=vectorstore_collection,
+#         metadatas=metadatas,
+#         index_name="default"
+#     )
+#     return vectorstore.as_retriever(
+#         search_kwargs = {"filter":{"username":username}}
+#     )
+
+async def vectorstore_init_faiss(text, username):
+    import gc
+    embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+    
+    vectorstore_collection.delete_many({"username": username})
+    
+    batch_size = 30 
+    total_chunks = len(text)
+    vectorstore = None
+    
+    try:
+        for i in range(0, total_chunks, batch_size):
+            end_idx = min(i + batch_size, total_chunks)
+            batch_texts = text[i:end_idx]
+            batch_metadatas = [{"username": username} for _ in range(len(batch_texts))]
+            
+            if i == 0:
+                vectorstore = MongoDBAtlasVectorSearch.from_texts(
+                    texts=batch_texts,
+                    embedding=embeddings,
+                    collection=vectorstore_collection,
+                    metadatas=batch_metadatas,
+                    index_name="default"
+                )
+            else:
+                vectorstore.add_texts(
+                    texts=batch_texts,
+                    metadatas=batch_metadatas
+                )
+            
+            gc.collect()
+        
+        return vectorstore.as_retriever(
+            search_kwargs={"filter": {"username": username}}
+        )
+    except Exception as e:
+        vectorstore_collection.delete_many({"username": username})
+        gc.collect()
+        raise Exception(f"Error initializing vector store: {str(e)}")
 
 async def get_vector_store_retriever_faiss(username):
     embeddings = HuggingFaceEmbeddings(model_name = "all-MiniLM-L6-v2")

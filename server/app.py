@@ -135,12 +135,34 @@ async def logout(session_id:str = Cookie(None)):
     return response
 
 
+# @app.post("/initialize_vectorstore")
+# async def initialize_vectorstore(request:VectorStoreRequest):
+#     splitted_text = request.splitted_text
+#     username = request.username
+#     await vectorstore_init_faiss(text=splitted_text,username=username)
+#     return {"message": "Vector store initialized successfully"}
+
 @app.post("/initialize_vectorstore")
-async def initialize_vectorstore(request:VectorStoreRequest):
-    splitted_text = request.splitted_text
-    username = request.username
-    await vectorstore_init_faiss(text=splitted_text,username=username)
-    return {"message": "Vector store initialized successfully"}
+async def initialize_vectorstore(request: VectorStoreRequest):
+    import gc
+    
+    try:
+        splitted_text = request.splitted_text
+        username = request.username
+        
+        max_chunks = 300  
+        if len(splitted_text) > max_chunks:
+            splitted_text = splitted_text[:max_chunks]
+            
+        gc.collect()
+        
+        await vectorstore_init_faiss(text=splitted_text, username=username)
+        
+        gc.collect()
+        
+        return {"message": "Vector store initialized successfully"}
+    except Exception as e:
+        return {"message": f"Error initializing vector store: {str(e)}"}, 500
 
 @app.delete("/delete_vectorstore")
 async def delete_user_vectorstore(username):
