@@ -1,4 +1,3 @@
-from langchain_groq.chat_models import ChatGroq
 from langchain_core.prompts import ChatPromptTemplate,MessagesPlaceholder
 from langchain_core.runnables import RunnablePassthrough
 from langchain_huggingface import HuggingFaceEmbeddings
