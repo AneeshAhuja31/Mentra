@@ -2,7 +2,6 @@ from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import time
 from dotenv import load_dotenv
-from langchain.schema.messages import HumanMessage,AIMessage
 load_dotenv()
 
 mongodb_uri = os.getenv("MONGODB_URI")

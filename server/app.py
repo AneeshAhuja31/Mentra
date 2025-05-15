@@ -23,10 +23,10 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allows all origins
+    allow_origins=["*"],  
     allow_credentials=True,
-    allow_methods=["*"],  # Allows all methods
-    allow_headers=["*"],  # Allows all headers
+    allow_methods=["*"],  
+    allow_headers=["*"],  
 )
 
 
@@ -58,6 +58,10 @@ class CoverLetterRequest(BaseModel):
     job_description:str
     hiring_manager:str
     company_name:str
+
+@app.get("/")
+async def root():
+    return {"message": "Mentra is running"}
 
 @app.get("/health")
 async def health_check():
