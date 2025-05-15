@@ -1,7 +1,7 @@
-from qna_generator import llm,return_context_from_faiss_vectorstore
+from qna_generator import llm
+from pdf_content_db import get_pdf_content
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
-from qna_generator import llm,return_context_from_faiss_vectorstore
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 base_prompt = '''You are an expert ATS (Applicant Tracking System) analyzer and resume reviewer. Your task is to analyze the provided resume and rate it out of 100 based strictly on the factors provided below.
@@ -68,7 +68,7 @@ async def split_response(text):
 
 
 async def generate_ats_response(username):
-    context = await return_context_from_faiss_vectorstore(username)
+    context = await get_pdf_content(username)
     chain = qna_prompt|llm|StrOutputParser()
     text = await chain.ainvoke({"resume_text":context})
     score,review = await split_response(text)

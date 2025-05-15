@@ -15,6 +15,9 @@ class MongoDBChatMessageHistory(BaseChatMessageHistory):
         self.collection = self.db[collection_name]
         self.chat_id = chat_id
         self.messages:List[BaseMessage] = []
+        split_id = self.chat_id.split("_chat_")
+        with_chat_ = self.chat_id.removesuffix(split_id[-1])
+        self.username = with_chat_.removesuffix("_chat_")
     
     
     
@@ -41,7 +44,8 @@ class MongoDBChatMessageHistory(BaseChatMessageHistory):
                 "chat_id":self.chat_id,
                 "role":"human",
                 "content":msg.content,
-                "timestamp":time.time()
+                "timestamp":time.time(),
+                "username":self.username
             }
         elif isinstance(msg,AIMessage):
             doc = {

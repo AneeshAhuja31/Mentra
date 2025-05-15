@@ -1,7 +1,7 @@
 from fastapi import FastAPI,Cookie
 from pydantic import BaseModel
 from pdfname_db import insert_pdf_name,find_pdf_name,delete_pdf_name_and_ats
-from chatbot import vectorstore_init_faiss,delete_vectorstore_faiss,create_ragchain
+from chatbot import create_ragchain
 from chathistory_adapter import get_chat_history_for_ui,insert_chat_history,delete_chat_history,delete_complete_chat_history
 from chat_mangement import insert_chat,find_chat,get_chats,delete_chat,delete_chat_list,bookmark_chat,find_bookmarks,unbookmark_chat
 from qna_generator import generate_qna
@@ -12,6 +12,7 @@ from ats_generator import generate_ats_response
 from ats_score_db import insert_ats,find_ats
 from questions_results import initialize_questions,update_questions,delete_questions,retrieve_questions
 from cl_generator import generate_cover_letter
+from pdf_content_db import insert_pdf_content,delete_pdf_content
 from fastapi.responses import JSONResponse
 from typing import List
 import gc
@@ -33,9 +34,9 @@ class UserRequest(BaseModel):
     username:str
     password:str
 
-class VectorStoreRequest(BaseModel):
+class PDFContentRequest(BaseModel):
     username: str
-    splitted_text: list
+    pdf_content: str
 
 class ProcessMessageRequest(BaseModel):
     chat_id:str
@@ -135,39 +136,15 @@ async def logout(session_id:str = Cookie(None)):
     return response
 
 
-# @app.post("/initialize_vectorstore")
-# async def initialize_vectorstore(request:VectorStoreRequest):
-#     splitted_text = request.splitted_text
-#     username = request.username
-#     await vectorstore_init_faiss(text=splitted_text,username=username)
-#     return {"message": "Vector store initialized successfully"}
+@app.post("/upload_pdf_content")
+async def upload_pdf_content(request:PDFContentRequest):
+    pdf_content = request.pdf_content
+    username = request.username
+    return await insert_pdf_content(pdf_content,username)    
 
-@app.post("/initialize_vectorstore")
-async def initialize_vectorstore(request: VectorStoreRequest):
-    import gc
-    
-    try:
-        splitted_text = request.splitted_text
-        username = request.username
-        
-        max_chunks = 300  
-        if len(splitted_text) > max_chunks:
-            splitted_text = splitted_text[:max_chunks]
-            
-        gc.collect()
-        
-        await vectorstore_init_faiss(text=splitted_text, username=username)
-        
-        gc.collect()
-        
-        return {"message": "Vector store initialized successfully"}
-    except Exception as e:
-        return {"message": f"Error initializing vector store: {str(e)}"}, 500
-
-@app.delete("/delete_vectorstore")
-async def delete_user_vectorstore(username):
-    result = await delete_vectorstore_faiss(username)
-    return result    
+@app.delete("/delete_pdf_content")
+async def delete_pdf_content_by_username(username):
+    return await delete_pdf_content(username)
 
 @app.post("/upload_pdf_name")
 async def upload_pdf_name_with_username(username,pdf_name):
@@ -225,7 +202,7 @@ async def process_manage(request: ProcessMessageRequest):
     chat_id = request.chat_id
     content = request.content
     username = request.username
-    await insert_chat_history(chat_id, "human", content, username)
+    #await insert_chat_history(chat_id, "human", content, username)
     
     test_scores_data = await get_test_score_list(username)
     

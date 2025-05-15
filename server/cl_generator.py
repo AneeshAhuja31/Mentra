@@ -1,6 +1,7 @@
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
-from qna_generator import return_context_from_faiss_vectorstore,llm
+from qna_generator import llm
+from pdf_content_db import get_pdf_content
 
 base_prompt = """
 Generate a professional cover letter using the format below. Fill in all placeholders based on the provided applicant and job details.
@@ -32,7 +33,7 @@ Sincerely,
 """
 
 async def generate_cover_letter(username,job_description,hiring_manager = "Hiring Manager",company_name = ""):
-    resume_context = await return_context_from_faiss_vectorstore(username)
+    resume_context = await get_pdf_content(username)
     cover_letter_prompt = ChatPromptTemplate.from_template(
         """
         Resume Information:

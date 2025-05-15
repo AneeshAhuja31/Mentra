@@ -1,17 +1,14 @@
 from langchain_core.prompts import ChatPromptTemplate,MessagesPlaceholder
 from langchain_core.runnables import RunnablePassthrough
-from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_core.runnables.history import RunnableWithMessageHistory
-from langchain.chains import create_history_aware_retriever,create_retrieval_chain
 from langchain.chains.combine_documents import create_stuff_documents_chain
 from chathistory_class import get_chat_history
+from langchain_core.documents import Document
 import os
 from dotenv import load_dotenv
 from pymongo import MongoClient
-#from langchain_mongodb import MongoDBAtlasVectorSearch
-from langchain.vectorstores import MongoDBAtlasVectorSearch
+from pdf_content_db import get_pdf_content
 from langchain_google_genai import ChatGoogleGenerativeAI
-import gc
 load_dotenv()
 gemini_api_key = os.getenv("GEMINI_API_KEY")
 
@@ -23,20 +20,6 @@ client = MongoClient(mongodb_uri)
 db = client.mentra_db
 chat_history_collection = db.chat_history
 
-vectorstore_collection = db.vectorstore_embeddings
-
-# Define the vector search index configuration
-ATLAS_VECTOR_SEARCH_INDEX_CONFIG = {
-    "name": "default",
-    "fields": [
-        {
-            "type": "vector",
-            "path": "embedding",
-            "numDimensions": 384,  # Dimension for all-MiniLM-L6-v2
-            "similarity": "cosine"
-        }
-    ]
-}
 
 
 contextualize_q_prompt = '''
@@ -131,91 +114,13 @@ qa_prompt = ChatPromptTemplate.from_messages(
         ("user","{input}")
     ]
 )
-  
 
-# async def vectorstore_init_faiss(text,username):
-#     embeddings = HuggingFaceEmbeddings(model_name = "all-MiniLM-L6-v2")
+async def string_to_document(text):
+    return Document(page_content=text)
+
     
-#     vectorstore_collection.delete_many({"username":username})
-#     metadatas = [{"username": username} for _ in range(len(text))]
-
-#     vectorstore = MongoDBAtlasVectorSearch.from_texts(
-#         texts=text,
-#         embedding=embeddings,
-#         collection=vectorstore_collection,
-#         metadatas=metadatas,
-#         index_name="default"
-#     )
-#     return vectorstore.as_retriever(
-#         search_kwargs = {"filter":{"username":username}}
-#     )
-
-async def vectorstore_init_faiss(text, username):
-    import gc
-    embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
-    
-    vectorstore_collection.delete_many({"username": username})
-    
-    batch_size = 30 
-    total_chunks = len(text)
-    vectorstore = None
-    
-    try:
-        for i in range(0, total_chunks, batch_size):
-            end_idx = min(i + batch_size, total_chunks)
-            batch_texts = text[i:end_idx]
-            batch_metadatas = [{"username": username} for _ in range(len(batch_texts))]
-            
-            if i == 0:
-                vectorstore = MongoDBAtlasVectorSearch.from_texts(
-                    texts=batch_texts,
-                    embedding=embeddings,
-                    collection=vectorstore_collection,
-                    metadatas=batch_metadatas,
-                    index_name="default"
-                )
-            else:
-                vectorstore.add_texts(
-                    texts=batch_texts,
-                    metadatas=batch_metadatas
-                )
-            
-            gc.collect()
-        
-        return vectorstore.as_retriever(
-            search_kwargs={"filter": {"username": username}}
-        )
-    except Exception as e:
-        vectorstore_collection.delete_many({"username": username})
-        gc.collect()
-        raise Exception(f"Error initializing vector store: {str(e)}")
-
-async def get_vector_store_retriever_faiss(username):
-    embeddings = HuggingFaceEmbeddings(model_name = "all-MiniLM-L6-v2")
-
-    vectorstore = MongoDBAtlasVectorSearch(
-        collection=vectorstore_collection,
-        embedding=embeddings,
-        index_name="default"
-    )
-    return vectorstore.as_retriever(
-        search_kwargs = {"filter":{"username":username}}
-    )
-
-async def delete_vectorstore_faiss(username):
-    try:
-        result = vectorstore_collection.delete_many({"username":username})
-
-        if result.deleted_count > 0:
-            return {"success":True,"message":f"Vectorstore for {username} deleted"}
-        else:
-            return {"success":False,"message":f"No vectorstore found for {username}"}
-    except Exception as e:
-        return {"success":False,"message":f"Error deleting vector store: {str(e)}"}
-    
-async def create_conversational_rag_chain(llm, prompt, vectorstore_retriever, qa_prompt, test_stats="No test data available.",wrong_questions_list = [],right_questions_list = []):
-    history_aware_chain = create_history_aware_retriever(llm, vectorstore_retriever, prompt)
-    
+async def create_conversational_rag_chain(llm, pdf_content, qa_prompt, test_stats="No test data available.",wrong_questions_list = [],right_questions_list = []):
+    pdf_doc = await string_to_document(pdf_content)
     qa_chain = create_stuff_documents_chain(
         llm, 
         qa_prompt, 
@@ -223,17 +128,19 @@ async def create_conversational_rag_chain(llm, prompt, vectorstore_retriever, qa
     )
     wrong_questions_string = "\n".join(wrong_questions_list)
     right_questions_string = "\n".join(right_questions_list)
-    
-    retrieval_chain = create_retrieval_chain(history_aware_chain, qa_chain)
-    
+
+
     combined_chain = RunnablePassthrough.assign(
+        context=lambda _: [pdf_doc],
         test_stats=lambda _: test_stats,
         wrong_questions=lambda _:wrong_questions_string,
         right_questions=lambda _:right_questions_string
-    ) | retrieval_chain
+    ) | qa_chain
     
+    formatted_chain = combined_chain | (lambda response: {"answer": response})
+
     conversational_rag_chain = RunnableWithMessageHistory(
-        combined_chain,
+        formatted_chain,
         get_chat_history(),
         input_messages_key="input",
         history_messages_key="chat_history"
@@ -242,7 +149,7 @@ async def create_conversational_rag_chain(llm, prompt, vectorstore_retriever, qa
     return conversational_rag_chain
 
 async def create_ragchain(username, test_stats="No test data available.",wrong_questions_list=[],right_questions_list=[]):
-    vectorstore_retriever = await get_vector_store_retriever_faiss(username)
+    pdf_content = await get_pdf_content(username)
     custom_qa_prompt = ChatPromptTemplate.from_messages([
         ("system", system_prompt),
         MessagesPlaceholder("chat_history"),
@@ -251,8 +158,7 @@ async def create_ragchain(username, test_stats="No test data available.",wrong_q
     
     conversational_rag_chain = await create_conversational_rag_chain(
         llm,
-        prompt,
-        vectorstore_retriever,
+        pdf_content,
         custom_qa_prompt,
         test_stats=test_stats,
         wrong_questions_list=wrong_questions_list,
