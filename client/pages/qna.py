@@ -324,30 +324,26 @@ else:
             st.markdown(f"### Score: {st.session_state.score}/10")
 
     if not st.session_state.submitted:
-        def update_selection(q_no):
-            selected_value = st.session_state[f"q_{q_no}"]
-            st.session_state.selected_choices[q_no] = selected_value
-            update_session_cache()
-
+        
         for qna_item in st.session_state.qna:
             st.markdown(f"<h3 style='color: #FFD700;'>Q{qna_item['q_no']}: {qna_item['question']}:</h3>", unsafe_allow_html=True)
             q_no = qna_item['q_no']
             choices = qna_item['choices']
-            
-            # Initialize the session state for this radio button if not already set
-            if f"q_{q_no}" not in st.session_state:
-                if q_no in st.session_state.selected_choices:
-                    st.session_state[f"q_{q_no}"] = st.session_state.selected_choices[q_no]
-            
-            # Create the radio button with on_change callback
-            choice = st.radio(
-                "Select your answer:",
-                options=qna_item["choices"],
+            idx = None
+            if q_no in st.session_state.selected_choices and st.session_state.selected_choices[q_no]:
+                already_selected_val = st.session_state.selected_choices[q_no]
+                try:
+                    idx = choices.index(already_selected_val)
+                except ValueError:
+                    idx = None
+            choice = st.radio("Select your answer:",
+                qna_item["choices"],
                 key=f"q_{q_no}",
-                on_change=update_selection,
-                args=(q_no,)
+                index=idx,
             )
-            
+            if choice is not None:
+                st.session_state.selected_choices[q_no] = choice
+                update_session_cache()
             st.write("---")
         c1,c2 = st.columns([3,1])
         with c1:
