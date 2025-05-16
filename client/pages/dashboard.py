@@ -210,45 +210,48 @@ def show():
                 """,
                 unsafe_allow_html=True
             )
-        if st.button("Remove PDF"):
-        
-            pdf_delete_response = requests.delete(f"https://mentra-backend.onrender.com/delete_pdf_name_and_ats?username={st.session_state.username}")
-            if pdf_delete_response.status_code == 200:
-                pdf_delete_response_data = pdf_delete_response.json()
-                print(pdf_delete_response_data["message"])
-                pdf_content_delete_response = requests.delete(f"https://mentra-backend.onrender.com/delete_pdf_content?username={st.session_state.username}")
-                if pdf_content_delete_response.status_code == 200:
-                    pdf_content_delete_response_data = pdf_content_delete_response.json()
-                    print(pdf_content_delete_response_data["message"])
-                    chat_delete_response = requests.delete(f"https://mentra-backend.onrender.com/delete_chat_list?username={st.session_state.username}")
-                    if chat_delete_response.status_code == 200:
-                        chat_history_delete_response = requests.delete(f"https://mentra-backend.onrender.com/delete_complete_chat_history?username={st.session_state.username}")
-                        if chat_history_delete_response.status_code == 200:
-                            chat_history_delete_response_data = chat_history_delete_response.json()
-                            print(chat_history_delete_response_data["message"])
-                            questions_delete_response = requests.delete(f"https://mentra-backend.onrender.com/delete_questions?username={st.session_state.username}")
-                            if questions_delete_response.status_code == 200:
-                                questions_delete_response_data = questions_delete_response.json()
-                                print(questions_delete_response_data["message"])    
-                                test_score_delete_response = requests.delete(f"https://mentra-backend.onrender.com/delete_test_scores?username={st.session_state.username}")
-                                if test_score_delete_response.status_code == 200:
-                                    test_score_delete_response_data = test_score_delete_response.json()
-                                    print(test_score_delete_response_data["message"])
-                                
-                                st.session_state.chats = {}
-                                st.session_state.active_chat_id = None
-                                st.session_state.current_chat_history = []
-                                st.session_state.filename = None
-                                st.session_state.ats = {}
-                                update_session_cache()
-                    
-                    
-                            if pdf_content_delete_response_data["deleted"]:
-                                st.success("PDF deleted successfully")
-                                st.rerun()
-                            else:
-                                st.error("Failed to delete PDF")
-    
+        col = st.columns([1,3])
+        with col[0]:
+            if st.button("Remove PDF"):
+            
+                pdf_delete_response = requests.delete(f"https://mentra-backend.onrender.com/delete_pdf_name_and_ats?username={st.session_state.username}")
+                if pdf_delete_response.status_code == 200:
+                    pdf_delete_response_data = pdf_delete_response.json()
+                    print(pdf_delete_response_data["message"])
+                    pdf_content_delete_response = requests.delete(f"https://mentra-backend.onrender.com/delete_pdf_content?username={st.session_state.username}")
+                    if pdf_content_delete_response.status_code == 200:
+                        pdf_content_delete_response_data = pdf_content_delete_response.json()
+                        print(pdf_content_delete_response_data["message"])
+                        chat_delete_response = requests.delete(f"https://mentra-backend.onrender.com/delete_chat_list?username={st.session_state.username}")
+                        if chat_delete_response.status_code == 200:
+                            chat_history_delete_response = requests.delete(f"https://mentra-backend.onrender.com/delete_complete_chat_history?username={st.session_state.username}")
+                            if chat_history_delete_response.status_code == 200:
+                                chat_history_delete_response_data = chat_history_delete_response.json()
+                                print(chat_history_delete_response_data["message"])
+                                questions_delete_response = requests.delete(f"https://mentra-backend.onrender.com/delete_questions?username={st.session_state.username}")
+                                if questions_delete_response.status_code == 200:
+                                    questions_delete_response_data = questions_delete_response.json()
+                                    print(questions_delete_response_data["message"])    
+                                    test_score_delete_response = requests.delete(f"https://mentra-backend.onrender.com/delete_test_scores?username={st.session_state.username}")
+                                    if test_score_delete_response.status_code == 200:
+                                        test_score_delete_response_data = test_score_delete_response.json()
+                                        print(test_score_delete_response_data["message"])
+                                    
+                                    st.session_state.chats = {}
+                                    st.session_state.active_chat_id = None
+                                    st.session_state.current_chat_history = []
+                                    st.session_state.filename = None
+                                    st.session_state.ats = {}
+                                    update_session_cache()
+                        
+                        
+                                if pdf_content_delete_response_data["deleted"]:
+                                    st.success("PDF deleted successfully")
+                                    st.rerun()
+                                else:
+                                    st.error("Failed to delete PDF")
+        with col[1]:
+            st.caption("Removing your PDF will also delete ALL your data on Mentra!")
     if 'ats' in st.session_state and st.session_state.ats:
         
         cols = st.columns([1,1.5])
@@ -258,15 +261,15 @@ def show():
                 score = st.session_state.ats.get('ats_score', 0)
                 
                 if score >= 80:
-                    color = "#006400"  #Dark Green
+                    color = "#006400"  
                 elif score >= 60:
-                    color = "#4CAF50"  #Green
+                    color = "#4CAF50"  
                 elif score >= 40:
-                    color = "#FFC107"  #Yellow
+                    color = "#FFC107"  
                 elif score >= 20:
-                    color = "#F44336"  #Red
+                    color = "#F44336"  
                 else:
-                    color = "#8B0000"  #DarkRed
+                    color = "#8B0000"  
 
                 st.markdown(f"<h3 style='text-align: center; color: {color};'>Resume Score</h3>", unsafe_allow_html=True)
                 #progress bar
