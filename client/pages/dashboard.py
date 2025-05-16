@@ -19,8 +19,8 @@ hide_default_navigation = """
         }
             
         [data-testid="stSidebar"] {
-            min-width: 210px !important;
-            max-width: 210px !important;
+            min-width: 250px !important;
+            max-width: 250px !important;
             width: 210px !important;
         }
             
@@ -73,7 +73,7 @@ def verify_authentication():
         if not session_id:
             return False
         cookie = {"session_id":session_id}
-        response = requests.get("https://mentra-wtcc.onrender.com/validate_session",cookies=cookie)
+        response = requests.get("https://mentra-backend.onrender.com/validate_session",cookies=cookie)
         if response.status_code == 200:
             data = response.json()
             if data["authenticated"]:
@@ -133,19 +133,18 @@ if not verify_authentication():
     st.switch_page("pages/login_.py")
 
 
-def get_pdf_and_split_text(file):
+def get_pdf_text(file):
     pdf_reader = PdfReader(file)
     text = ""
     for page in pdf_reader.pages:
         text += page.extract_text()
     print(text)
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size = 500,chunk_overlap=50)
-    return text_splitter.split_text(text)
+    return text
 
 def logout():
     session_id = st.session_state.session_id
     cookie = {"session_id":session_id}
-    response = requests.get("https://mentra-wtcc.onrender.com/logout",cookies=cookie)
+    response = requests.get("https://mentra-backend.onrender.com/logout",cookies=cookie)
     response_data = response.json()
     if response_data.get('result'):
         for key in list(st.session_state.keys()):
@@ -213,20 +212,25 @@ def show():
             )
         if st.button("Remove PDF"):
         
-            pdf_delete_response = requests.delete(f"https://mentra-wtcc.onrender.com/delete_pdf_name_and_ats?username={st.session_state.username}")
+            pdf_delete_response = requests.delete(f"https://mentra-backend.onrender.com/delete_pdf_name_and_ats?username={st.session_state.username}")
             if pdf_delete_response.status_code == 200:
-                vectorstore_delete_response = requests.delete(f"https://mentra-wtcc.onrender.com/delete_vectorstore?username={st.session_state.username}")
-                vectorstore_delete_response_data = vectorstore_delete_response.json()
-                if vectorstore_delete_response.status_code == 200:
-                    chat_delete_response = requests.delete(f"https://mentra-wtcc.onrender.com/delete_chat_list?username={st.session_state.username}")
+                pdf_delete_response_data = pdf_delete_response.json()
+                print(pdf_delete_response_data["message"])
+                pdf_content_delete_response = requests.delete(f"https://mentra-backend.onrender.com/delete_pdf_content?username={st.session_state.username}")
+                if pdf_content_delete_response.status_code == 200:
+                    pdf_content_delete_response_data = pdf_content_delete_response.json()
+                    print(pdf_content_delete_response_data["message"])
+                    chat_delete_response = requests.delete(f"https://mentra-backend.onrender.com/delete_chat_list?username={st.session_state.username}")
                     if chat_delete_response.status_code == 200:
-                        chat_history_delete_response = requests.delete(f"https://mentra-wtcc.onrender.com/delete_complete_chat_history?username={st.session_state.username}")
+                        chat_history_delete_response = requests.delete(f"https://mentra-backend.onrender.com/delete_complete_chat_history?username={st.session_state.username}")
                         if chat_history_delete_response.status_code == 200:
-                            questions_delete_response = requests.delete(f"https://mentra-wtcc.onrender.com/delete_questions?username={st.session_state.username}")
+                            chat_history_delete_response_data = chat_history_delete_response.json()
+                            print(chat_history_delete_response_data["message"])
+                            questions_delete_response = requests.delete(f"https://mentra-backend.onrender.com/delete_questions?username={st.session_state.username}")
                             if questions_delete_response.status_code == 200:
                                 questions_delete_response_data = questions_delete_response.json()
                                 print(questions_delete_response_data["message"])    
-                                test_score_delete_response = requests.delete(f"https://mentra-wtcc.onrender.com/delete_test_scores?username={st.session_state.username}")
+                                test_score_delete_response = requests.delete(f"https://mentra-backend.onrender.com/delete_test_scores?username={st.session_state.username}")
                                 if test_score_delete_response.status_code == 200:
                                     test_score_delete_response_data = test_score_delete_response.json()
                                     print(test_score_delete_response_data["message"])
@@ -239,11 +243,11 @@ def show():
                                 update_session_cache()
                     
                     
-                            if vectorstore_delete_response_data["success"]:
-                                st.success("PDF and vector store deleted successfully")
+                            if pdf_content_delete_response_data["deleted"]:
+                                st.success("PDF deleted successfully")
                                 st.rerun()
                             else:
-                                st.error("Failed to delete PDF or vector store")
+                                st.error("Failed to delete PDF")
     
     if 'ats' in st.session_state and st.session_state.ats:
         
@@ -301,7 +305,7 @@ def show():
                 st.markdown(html_code, unsafe_allow_html=True)
                 
             
-            bookmarked_chats_response = requests.get(f"https://mentra-wtcc.onrender.com/find_bookmarks?username={st.session_state.username}")
+            bookmarked_chats_response = requests.get(f"https://mentra-backend.onrender.com/find_bookmarks?username={st.session_state.username}")
             bookmarked_chats_response_data = bookmarked_chats_response.json()
             bookmarked_chat_list = bookmarked_chats_response_data["bookmarked_chats_list"]
             
@@ -407,13 +411,19 @@ def show():
 
         st.write(" ")
 
+        #####################
+        if st.button("📨Build CL"):
+            st.switch_page("pages/cl_.py")
+        ######################
+        st.write(" ")
+
         if st.button("⏻Logout"):
             logout()
         
         st.write(" ")
 
 if not st.session_state.filename:
-    pdf_check_response = requests.get(f"https://mentra-wtcc.onrender.com/find_pdf_name?username={st.session_state.username}")
+    pdf_check_response = requests.get(f"https://mentra-backend.onrender.com/find_pdf_name?username={st.session_state.username}")
     pdf_check_json = pdf_check_response.json()
 
     if not pdf_check_json["bool"]:
@@ -424,27 +434,28 @@ if not st.session_state.filename:
         if file:
             files = {"file":(file.name,file,file.type)}
             data = {"username":st.session_state.username}
-            with st.spinner("Uploading and initializing vector store..."):
+            with st.spinner("Uploading pdf and generating ATS..."):
                 
-                response = requests.post(f"https://mentra-wtcc.onrender.com/upload_pdf_name?username={st.session_state.username}&pdf_name={file.name}")
-                response_data = response.json()
+                pdf_text = get_pdf_text(file)
+                if len(PdfReader(file).pages) > 2:  # Example: max 10 pages
+                    st.error("Resume exceeds maximum page limit.")
+                    st.stop()
+                pdf_upload_request = {
+                    "username":st.session_state.username,
+                    "pdf_content":pdf_text
+                }
+                pdf_upload_response = requests.post(f"https://mentra-backend.onrender.com/upload_pdf_content",json=pdf_upload_request)
+                if pdf_upload_response.status_code == 200:
+                    pdf_upload_response_data = pdf_upload_response.json()
+                    print(pdf_upload_response_data["message"])
 
-                if response.status_code ==200:
-                    print(response_data["message"])
-                    splitted_text = get_pdf_and_split_text(file)
-                    if splitted_text:
-                        print("Text splitted successfully")
-                    vector_init_request = {
-                        "username":st.session_state.username,
-                        "splitted_text":splitted_text
-                    }
-                    init_vectorstore_response = requests.post(f"https://mentra-wtcc.onrender.com/initialize_vectorstore",json=vector_init_request)
-                    if init_vectorstore_response.status_code == 200:
-                        init_vectorstore_response_data = init_vectorstore_response.json()
-                        print(init_vectorstore_response_data["message"])
-                        
+                    pdf_name_upload_response = requests.post(f"https://mentra-backend.onrender.com/upload_pdf_name?username={st.session_state.username}&pdf_name={file.name}")
+                    if pdf_name_upload_response.status_code == 200:
+                        pdf_name_upload_response_data = pdf_name_upload_response.json()
+                        print(pdf_name_upload_response_data["message"])
+                    
                         if not st.session_state.ats:
-                            ats_generate_response = requests.get(f"https://mentra-wtcc.onrender.com/generate_ats?username={st.session_state.username}")
+                            ats_generate_response = requests.get(f"https://mentra-backend.onrender.com/generate_ats?username={st.session_state.username}")
                             st.session_state.ats = ats_generate_response.json()
                             insert_ats_body = {
                                 "username":st.session_state.username,
@@ -452,24 +463,25 @@ if not st.session_state.filename:
                                 "ats_review":st.session_state.ats["ats_review"]
                             }
                             
-                            ats_insert_response = requests.post(f"https://mentra-wtcc.onrender.com/insert_ats",json=insert_ats_body)
+                            ats_insert_response = requests.post(f"https://mentra-backend.onrender.com/insert_ats",json=insert_ats_body)
                             if ats_insert_response.status_code == 200:
                                 ats_insert_response_data = ats_insert_response.json()
                                 print(ats_insert_response_data["message"])
 
-                                questions_init_response = requests.post(f"https://mentra-wtcc.onrender.com/init_questions?username={st.session_state.username}")
+                                questions_init_response = requests.post(f"https://mentra-backend.onrender.com/init_questions?username={st.session_state.username}")
                                 if questions_init_response.status_code == 200:
                                     questions_init_response_data = questions_init_response.json()
                                     print(questions_init_response_data["message"])
-                                
+                            
 
                         update_session_cache()
-                        st.success("PDF uploaded and vector store initialized successfully!")
+                        st.success("PDF uploaded successfully!")
                         st.rerun()
                     else:
-                        st.error("Failed to initialize vector store.")
+                        st.error("Failed to upload pdf.")
                 else:
-                    st.error(response_data.get("message"))
+                    pdf_upload_response_data = pdf_upload_response.json()
+                    st.error(pdf_upload_response_data["message"])
 
         with st.sidebar:
             st.markdown("""
@@ -498,12 +510,17 @@ if not st.session_state.filename:
 
             st.write(" ")
 
+            if st.button("📨Build CL"):
+                st.toast("Upload file to use application features!",icon="〽️")
+        
+            st.write(" ")
+
             if st.button("⏻Logout"):
                 logout()
     else: 
         st.session_state.filename = pdf_check_json["filename"]
         if not st.session_state.ats:
-            ats_find_response = requests.get(f"https://mentra-wtcc.onrender.com/find_ats?username={st.session_state.username}")
+            ats_find_response = requests.get(f"https://mentra-backend.onrender.com/find_ats?username={st.session_state.username}")
             if ats_find_response.status_code == 200:
                 ats_find_response_data = ats_find_response.json()
                 if ats_find_response_data["bool"]:
@@ -515,7 +532,7 @@ if not st.session_state.filename:
         st.rerun()
 else:  #if we have filename but not ats, get ats from db   
     if not st.session_state.ats:
-        ats_find_response = requests.get(f"https://mentra-wtcc.onrender.com/find_ats?username={st.session_state.username}")
+        ats_find_response = requests.get(f"https://mentra-backend.onrender.com/find_ats?username={st.session_state.username}")
         if ats_find_response.status_code == 200:
             ats_find_response_data = ats_find_response.json()
             if ats_find_response_data["bool"]:

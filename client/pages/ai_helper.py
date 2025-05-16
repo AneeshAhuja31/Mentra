@@ -112,7 +112,7 @@ def verify_authentication():
             return False
         
         cookie = {"session_id": session_id}
-        response = requests.get("https://mentra-wtcc.onrender.com/validate_session", cookies=cookie)
+        response = requests.get("https://mentra-backend.onrender.com/validate_session", cookies=cookie)
         
         if response.status_code == 200:
             data = response.json()
@@ -135,13 +135,13 @@ if not verify_authentication():
     st.switch_page("pages/login_.py")
 
 
-pdf_name_check_response = requests.get(f"https://mentra-wtcc.onrender.com/find_pdf_name?username={st.session_state.username}")
+pdf_name_check_response = requests.get(f"https://mentra-backend.onrender.com/find_pdf_name?username={st.session_state.username}")
 if pdf_name_check_response.status_code == 200:
     pdf_name_check_response_data = pdf_name_check_response.json()
     if not pdf_name_check_response_data["bool"]:
         st.switch_page("pages/dashboard.py")
 
-chat_list_response = requests.get(f"https://mentra-wtcc.onrender.com/get_chat_list?username={st.session_state.username}")
+chat_list_response = requests.get(f"https://mentra-backend.onrender.com/get_chat_list?username={st.session_state.username}")
 if chat_list_response.status_code == 200:
     chats_list_response_json = chat_list_response.json()
     chats_data = chats_list_response_json["chat_list"]
@@ -155,7 +155,7 @@ if chat_list_response.status_code == 200:
         st.session_state.active_chat_id = next(iter(st.session_state.chats))
 
     if st.session_state.active_chat_id:
-        chat_history_response = requests.get(f"https://mentra-wtcc.onrender.com/get_chat_history_for_ui?chat_id={st.session_state.active_chat_id}")
+        chat_history_response = requests.get(f"https://mentra-backend.onrender.com/get_chat_history_for_ui?chat_id={st.session_state.active_chat_id}")
         if chat_history_response.status_code == 200:
             st.session_state.current_chat_history = chat_history_response.json()
     
@@ -174,7 +174,7 @@ def insert_component(chat_id):
 def create_new_chat(title):
     chat_id = f"{st.session_state.username}_chat_{uuid.uuid4()}"
     insert_component(chat_id)
-    response = requests.post(f"https://mentra-wtcc.onrender.com/new_chat?chat_id={chat_id}&username={st.session_state.username}&title={title}")
+    response = requests.post(f"https://mentra-backend.onrender.com/new_chat?chat_id={chat_id}&username={st.session_state.username}&title={title}")
     if response.status_code == 200:
         response_data = response.json()
         msg = response_data["message"]
@@ -192,7 +192,7 @@ def select_chat(chat_id):
     st.session_state.active_chat_id = chat_id
     insert_component(chat_id)
     st.session_state.input_disabled = False
-    response = requests.get(f"https://mentra-wtcc.onrender.com/get_chat_history_for_ui?chat_id={chat_id}")
+    response = requests.get(f"https://mentra-backend.onrender.com/get_chat_history_for_ui?chat_id={chat_id}")
     if response.status_code == 200:
         response_data = response.json()
         st.session_state.current_chat_history = response_data
@@ -200,14 +200,14 @@ def select_chat(chat_id):
     st.rerun()
 
 def delete_chat(chat_id):
-    response = requests.delete(f"https://mentra-wtcc.onrender.com/delete_chat?chat_id={chat_id}")
+    response = requests.delete(f"https://mentra-backend.onrender.com/delete_chat?chat_id={chat_id}")
     if response.status_code == 200:
         response_data = response.json()
         print(response_data["message"])
         if chat_id in st.session_state.chats:
             del st.session_state.chats[chat_id]
         
-        delete_chat_history_response = requests.delete(f"https://mentra-wtcc.onrender.com/delete_chat_history_by_chat_id?chat_id={chat_id}")
+        delete_chat_history_response = requests.delete(f"https://mentra-backend.onrender.com/delete_chat_history_by_chat_id?chat_id={chat_id}")
         if delete_chat_history_response.status_code == 200:
             delete_chat_history_response_data = delete_chat_history_response.json()
             print(delete_chat_history_response_data["message"])
@@ -216,7 +216,7 @@ def delete_chat(chat_id):
             if st.session_state.chats:
                 new_active_chat = next(iter(st.session_state.chats))
                 st.session_state.active_chat_id = new_active_chat
-                chathistory_for_ui_response = requests.get(f"https://mentra-wtcc.onrender.com/get_chat_history_for_ui?chat_id={new_active_chat}")
+                chathistory_for_ui_response = requests.get(f"https://mentra-backend.onrender.com/get_chat_history_for_ui?chat_id={new_active_chat}")
                 if chathistory_for_ui_response.status_code == 200:
                     st.session_state.current_chat_history = chathistory_for_ui_response.json()
                 else:
@@ -238,14 +238,14 @@ def bookmark_chat(chat_id):
         if current_bookmark_count >= 5:
             st.toast("Max limit of 5 bookmarks reached!",icon="〽️")
             return
-        bookmark_response = requests.post(f"https://mentra-wtcc.onrender.com/bookmark_chat?chat_id={chat_id}")
+        bookmark_response = requests.post(f"https://mentra-backend.onrender.com/bookmark_chat?chat_id={chat_id}")
         if bookmark_response.status_code == 200:
             bookmark_response_data = bookmark_response.json()
             if bookmark_response_data["updated"]:
                 st.session_state.chats[chat_id]["bookmarked"] = True
                 
     else:
-        unbookmark_response = requests.post(f"https://mentra-wtcc.onrender.com/unbookmark_chat?chat_id={chat_id}")
+        unbookmark_response = requests.post(f"https://mentra-backend.onrender.com/unbookmark_chat?chat_id={chat_id}")
         if unbookmark_response.status_code == 200:
             unbookmark_response_data = unbookmark_response.json()
             if unbookmark_response_data["updated"]:
@@ -278,7 +278,7 @@ with st.sidebar:
                         create_new_chat("New Chat")
                     st.session_state.show_title_input = False
             with col2:
-                if st.button("Cancel"):
+                if st.button("Close"):
                     st.session_state.show_title_input = False
                     st.rerun()
     st.divider()
@@ -318,7 +318,7 @@ async def process_message(chat_id,prompt):
         "content":prompt,
         "username":st.session_state.username
     }
-    response = requests.post(f"https://mentra-wtcc.onrender.com/process_message",json=doc)
+    response = requests.post(f"https://mentra-backend.onrender.com/process_message",json=doc)
     if response.status_code == 200:
         response_data = response.json()
         return response_data['response']
@@ -361,10 +361,6 @@ if st.session_state.active_chat_id and st.session_state.active_chat_id in st.ses
     with input_container:
         if not st.session_state.input_disabled:
             if prompt := st.chat_input("Type your message...",disabled=st.session_state.input_disabled):
-                st.session_state.current_chat_history.append({
-                    "role":"human",
-                    "content":prompt
-                })
                 st.session_state.input_disabled = True
                 st.session_state.message_to_process = prompt
                 update_session_cache()

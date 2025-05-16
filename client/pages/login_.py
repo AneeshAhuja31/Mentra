@@ -57,7 +57,7 @@ def verify_session():
         
         cookie = {"session_id":session_id}
         try:
-            response = requests.get("https://mentra-wtcc.onrender.com/validate_session", cookies=cookie)
+            response = requests.get("https://mentra-backend.onrender.com/validate_session", cookies=cookie)
 
             if response.status_code == 200:
                 data = response.json()
@@ -103,7 +103,7 @@ with st.container(border=True):
                 "password":password
             }
             try:
-                response = requests.post("https://mentra-wtcc.onrender.com/login",json=request)
+                response = requests.post("https://mentra-backend.onrender.com/login",json=request)
                 response_data = response.json()
                 if response.status_code == 200 and response_data.get('result') == True:
                     cookie_header = response.headers['set-cookie']
