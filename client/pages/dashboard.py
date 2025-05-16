@@ -138,7 +138,6 @@ def get_pdf_text(file):
     text = ""
     for page in pdf_reader.pages:
         text += page.extract_text()
-    print(text)
     return text
 
 def logout():
