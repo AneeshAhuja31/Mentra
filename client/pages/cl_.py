@@ -254,6 +254,7 @@ if st.session_state.text:
     
     st.code(st.session_state.text)
     st.info("Cover letter code block shown above. Copy it from there!")
+    st.caption("There maybe some placeholders in your cover letter that you can fill up manually!")
 
     st.download_button(
         label="Download as TXT",
