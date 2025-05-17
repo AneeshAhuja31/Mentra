@@ -1,8 +1,6 @@
 import streamlit as st
 import time 
 import requests
-import streamlit.components.v1 as components
-import pandas as pd
 
 st.set_page_config(page_title="QnA",page_icon="〽️",layout="centered")
 

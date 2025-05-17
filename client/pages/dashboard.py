@@ -1,8 +1,6 @@
 import streamlit as st
 import requests
-import pandas as pd
 from pypdf import PdfReader
-from langchain.text_splitter import RecursiveCharacterTextSplitter
 st.set_page_config(page_title="Dashboard",page_icon="〽️",layout="centered")
 
 hide_default_navigation = """

@@ -1,4 +1,3 @@
-import requests.cookies
 import streamlit as st
 import requests
 from http.cookies import SimpleCookie

@@ -15,11 +15,30 @@ from cl_generator import generate_cover_letter
 from pdf_content_db import insert_pdf_content,delete_pdf_content
 from fastapi.responses import JSONResponse
 from typing import List
-import gc
 from fastapi.middleware.cors import CORSMiddleware
+from apscheduler.schedulers.background import BackgroundScheduler
+from contextlib import asynccontextmanager
+import datetime
 
-gc.set_threshold(700, 10, 5)
-app = FastAPI()
+def cronjob():
+    current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    print(current_time)
+
+scheduler = BackgroundScheduler()
+scheduler.add_job(
+    cronjob, 
+    'interval', 
+    minutes=10,
+    id='ten_minute_task'
+)
+@asynccontextmanager
+async def lifespan(app:FastAPI):
+    scheduler.start()
+    job = scheduler.get_job("ten_minute_task")
+    yield
+    scheduler.shutdown()
+
+app = FastAPI(lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
