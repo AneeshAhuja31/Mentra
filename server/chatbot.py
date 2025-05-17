@@ -5,16 +5,18 @@ from langchain.chains.combine_documents import create_stuff_documents_chain
 from chathistory_class import get_chat_history
 from langchain_core.documents import Document
 import os
-from dotenv import load_dotenv
 from pymongo import MongoClient
 from pdf_content_db import get_pdf_content
 from langchain_google_genai import ChatGoogleGenerativeAI
-load_dotenv()
-gemini_api_key = os.getenv("GEMINI_API_KEY")
-
-llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash",google_api_key=gemini_api_key)
+from api_key_manager import APIKeyManager
+key_manager = APIKeyManager()
 
 mongodb_uri = os.getenv("MONGODB_URI")
+def get_llm():
+    return ChatGoogleGenerativeAI(
+        model="gemini-2.0-flash", 
+        google_api_key=key_manager.get_next_key()
+    )
 
 client = MongoClient(mongodb_uri)
 db = client.mentra_db
@@ -157,9 +159,9 @@ async def create_ragchain(username, test_stats="No test data available.",wrong_q
         MessagesPlaceholder("chat_history"),
         ("user", "{input}")
     ])
-    
+    current_llm = get_llm()
     conversational_rag_chain = await create_conversational_rag_chain(
-        llm,
+        current_llm,
         pdf_content,
         custom_qa_prompt,
         test_stats=test_stats,
