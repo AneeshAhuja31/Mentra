@@ -16,7 +16,6 @@ class APIKeyManager:
                 break
                 
         self.last_key_index = -1
-        print(f"Loaded {len(self.keys)} API keys")
         
     def get_next_key(self) -> str:
         self.last_key_index = (self.last_key_index + 1) % len(self.keys)

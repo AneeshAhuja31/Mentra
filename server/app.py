@@ -23,7 +23,10 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  
+    allow_origins=[
+        "https://mentra-lzdc.onrender.com", 
+        "https://mentra.aneeshahuja.tech"
+    ],  
     allow_credentials=True,
     allow_methods=["*"],  
     allow_headers=["*"],  
