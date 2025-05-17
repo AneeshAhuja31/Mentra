@@ -59,8 +59,27 @@ st.markdown("---")
 st.markdown("<h3 style='text-align: center; color: #FFD700;'>Why Choose Mentra?</h3>", unsafe_allow_html=True)
 st.markdown("<p style='text-align: center;'>Our AI-powered platform offers personalized guidance that evolves with your career journey. Upload your resume once and unlock a suite of tools designed to help you succeed.</p>", unsafe_allow_html=True)
 
+# Add social links section
+
 st.markdown("---")
 col1, col2, col3 = st.columns([1, 2, 1])
 with col2:
     if st.button("Get Started", type="primary", use_container_width=True):
         st.switch_page("pages/login_.py")
+
+st.markdown("---")
+st.markdown("""
+<div style="text-align: center; margin-top: 10px; margin-bottom: 20px;">
+    <p style="font-size: 1rem; color: #aaa;">Connect with me</p>
+    <div>
+        <a href="https://github.com/AneeshAhuja31" target="_blank" style="text-decoration: none; margin: 0 10px;">
+            <img src="https://github.com/fluidicon.png" width="32" height="32" alt="GitHub" style="vertical-align: middle;">
+            <span style="color: #FFD700; vertical-align: middle; margin-left: 5px;">GitHub</span>
+        </a>
+        <a href="https://www.linkedin.com/in/aneesh-ahuja-9600a6291/" target="_blank" style="text-decoration: none; margin: 0 10px;">
+            <img src="https://content.linkedin.com/content/dam/me/business/en-us/amp/brand-site/v2/bg/LI-Bug.svg.original.svg" width="32" height="32" alt="LinkedIn" style="vertical-align: middle;">
+            <span style="color: #FFD700; vertical-align: middle; margin-left: 5px;">LinkedIn</span>
+        </a>
+    </div>
+</div>
+""", unsafe_allow_html=True)
