@@ -1,8 +1,7 @@
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
-from qna_generator import llm
 from pdf_content_db import get_pdf_content
-
+from chatbot import get_llm
 base_prompt = """
 Generate a professional cover letter using the format below. Fill in all placeholders based on the provided applicant and job details.
 
@@ -48,6 +47,7 @@ async def generate_cover_letter(username,job_description,hiring_manager = "Hirin
         {base_prompt}
         """
     )
+    llm = get_llm()
     cover_letter_chain = cover_letter_prompt|llm|StrOutputParser()
 
     cover_letter = await cover_letter_chain.ainvoke({

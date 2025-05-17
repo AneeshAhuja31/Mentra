@@ -3,11 +3,10 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_google_genai import ChatGoogleGenerativeAI
 from pdf_content_db import get_pdf_content
 import os
+from chatbot import get_llm
 from dotenv import load_dotenv
 load_dotenv()
 
-gemini_api_key = os.getenv("GEMINI_API_KEY")
-llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash",google_api_key=gemini_api_key)
 mongodb_uri = os.getenv("MONGODB_URI")
 
 
@@ -61,6 +60,7 @@ async def split_response(response):
     return qna_list
 
 async def generate_qna(username):
+    llm = get_llm()
     context = await get_pdf_content(username)
     chain = qna_prompt|llm|StrOutputParser()
     response = await chain.ainvoke({"context":context})

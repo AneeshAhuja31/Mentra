@@ -1,4 +1,4 @@
-from qna_generator import llm
+from chatbot import get_llm
 from pdf_content_db import get_pdf_content
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
@@ -68,6 +68,7 @@ async def split_response(text):
 
 
 async def generate_ats_response(username):
+    llm = get_llm()
     context = await get_pdf_content(username)
     chain = qna_prompt|llm|StrOutputParser()
     text = await chain.ainvoke({"resume_text":context})
