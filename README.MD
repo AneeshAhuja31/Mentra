@@ -8,12 +8,10 @@ Mentra is an AI-powered career development platform designed to help job seekers
 Check out the deployed app here: [Live Demo](https://mentra.aneeshahuja.tech)
 
 ## Table of Contents
-- [Installation](#installation)
-- [Usage](#usage)
+- [Screenshots](#screenshots)
 - [Features](#features)
-- [Technologies Used](#technologies-used)
-- [Contributing](#contributing)
-- [License](#license)
+- [Technologies Used](#technologies)
+- [Installation](#installation)
 - [Contact](#contact)
 
 
@@ -54,7 +52,7 @@ Formatting Tips: Access best practices for effective cover letters
 - Bookmark System: Save important chats for quick access (up to 5 bookmarks)
 Performance Overview: See all your test scores and resume evaluation at a glance
 
-## Technologies Used
+## Technologies
 1. Frontend: Streamlit for UI and caching
 2. Backend: FastAPI 
 3. Database: MongoDB for user data, chat history, and application state
