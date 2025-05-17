@@ -13,8 +13,14 @@ Mentra is an AI-powered career development platform designed to help job seekers
 - [Contact](#contact)
 
 
-## Usage
-[Provide instructions on how to use the application, including screenshots if possible]
+## Screenshots
+![Landing_Page](assets\Screenshot 2025-05-17 195704.png)
+![Dashboard](assets\Screenshot 2025-05-17 195832.png)
+![AI_Mentor](assets\Screenshot 2025-05-17 200055.png)
+![Test_History](assets\Screenshot 2025-05-17 200152.png)
+![Cover_Letter_Generator](assets\Screenshot 2025-05-17 200204.png)
+
+
 
 ## Features
 1. 📄 Resume Analysis
