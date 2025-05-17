@@ -3,6 +3,10 @@
 ## Description
 Mentra is an AI-powered career development platform designed to help job seekers optimize their professional materials, assess their skills, and receive personalized career guidance.
 
+## 🚀 Live Demo
+
+Check out the deployed app here: [Live Demo](https://mentra.aneeshahuja.tech)
+
 ## Table of Contents
 - [Installation](#installation)
 - [Usage](#usage)
