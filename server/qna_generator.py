@@ -55,7 +55,7 @@ async def split_response(response):
             correct_option = lines[5]
             qna_list.append({"q_no":i+1,"question":question,"choices":choices,"answer":correct_option})
     except Exception as e:
-        print(e)
+        #print(e)
         return []
     
     return qna_list

@@ -7,7 +7,7 @@ async def insert_ats(username,score,review):
             )
     response = {"message":"Unable to upload ATS"}
     if result.modified_count:
-        print("Message Inserted Successfully")
+        #print("Message Inserted Successfully")
         response = {"message":"Uploaded ATS successfully"}
     return response
 

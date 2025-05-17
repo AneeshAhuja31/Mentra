@@ -17,7 +17,7 @@ async def insert_user(document):
     document['password']=hashed_pwd
     result = await users.insert_one(document)
     if result.inserted_id:
-        print(f"User Credential Inserted: {result.inserted_id}")
+        #print(f"User Credential Inserted: {result.inserted_id}")
         return True
     else:
         return False

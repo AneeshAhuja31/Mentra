@@ -25,9 +25,9 @@ class MongoDBChatMessageHistory(BaseChatMessageHistory):
         if not self.messages:
             cursor = await self.collection.find({"chat_id":self.chat_id}).sort("timestamp",1).to_list(length=None)
             messages = []
-            print(f"Found {len(cursor)} messages for chat_id: {self.chat_id}")
+            #print(f"Found {len(cursor)} messages for chat_id: {self.chat_id}")
             for doc in cursor:
-                print(f"Retreived message: {doc}")
+                #print(f"Retreived message: {doc}")
                 if doc["role"] == "human":
                     messages.append(HumanMessage(content=doc["content"]))
                 elif doc["role"] == "ai":

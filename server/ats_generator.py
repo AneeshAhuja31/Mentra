@@ -72,8 +72,8 @@ async def generate_ats_response(username):
     chain = qna_prompt|llm|StrOutputParser()
     text = await chain.ainvoke({"resume_text":context})
     score,review = await split_response(text)
-    print(score)
-    print(review)
+    #print(score)
+    #print(review)
     return {
         "ats_score":score,
         "ats_review":review

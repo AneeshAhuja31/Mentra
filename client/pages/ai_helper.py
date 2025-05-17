@@ -178,7 +178,7 @@ def create_new_chat(title):
     if response.status_code == 200:
         response_data = response.json()
         msg = response_data["message"]
-        print(f"{msg}")
+        #print(f"{msg}")
         st.session_state.chats[chat_id] = {
             "title":title
         }
@@ -203,14 +203,14 @@ def delete_chat(chat_id):
     response = requests.delete(f"https://mentra-backend.onrender.com/delete_chat?chat_id={chat_id}")
     if response.status_code == 200:
         response_data = response.json()
-        print(response_data["message"])
+        #print(response_data["message"])
         if chat_id in st.session_state.chats:
             del st.session_state.chats[chat_id]
         
         delete_chat_history_response = requests.delete(f"https://mentra-backend.onrender.com/delete_chat_history_by_chat_id?chat_id={chat_id}")
         if delete_chat_history_response.status_code == 200:
             delete_chat_history_response_data = delete_chat_history_response.json()
-            print(delete_chat_history_response_data["message"])
+            #print(delete_chat_history_response_data["message"])
         
         if chat_id == st.session_state.active_chat_id:
             if st.session_state.chats:
