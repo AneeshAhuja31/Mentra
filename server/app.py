@@ -19,10 +19,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from apscheduler.schedulers.background import BackgroundScheduler
 from contextlib import asynccontextmanager
 import datetime
+import requests
 
 def cronjob():
     current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    print(current_time)
+    print(f"Pinging service at {current_time}")
+    response = requests.get("https://mentra-backend.onrender.com/health")
+    print(f"Service response: {response.status_code}")
 
 scheduler = BackgroundScheduler()
 scheduler.add_job(
