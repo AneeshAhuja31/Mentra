@@ -24,9 +24,16 @@ import requests
 def cronjob():
     current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     print(f"Pinging service at {current_time}")
-    response = requests.get("https://mentra-backend.onrender.com/health")
-    print(f"Service response: {response.status_code}")
 
+    server_response = requests.get("https://mentra-backend.onrender.com/health")
+    print(f"Service response: {server_response.status_code}")
+
+    frontend_response1 = requests.get("https://mentra-lzdc.onrender.com")
+    print(f"Client (render) response: {frontend_response1.status_code}")
+
+    frontend_response2 = requests.get("https://mentra.aneeshahuja.tech")
+    print(f"Client (custom domain) response: {frontend_response2.status_code}")
+    
 scheduler = BackgroundScheduler()
 scheduler.add_job(
     cronjob, 
