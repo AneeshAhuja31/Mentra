@@ -91,8 +91,12 @@ class CoverLetterRequest(BaseModel):
     hiring_manager:str
     company_name:str
 
+@app.head("/")
+async def root_head():
+    return {"message": "Mentra is running"}
+
 @app.get("/")
-async def root():
+async def root_get():
     return {"message": "Mentra is running"}
 
 @app.get("/health")
